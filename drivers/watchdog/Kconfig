@@ -160,6 +160,14 @@ config SOFT_WATCHDOG_PRETIMEOUT
 	  watchdog. Be aware that governors might affect the watchdog because it
 	  is purely software, e.g. the panic governor will stall it!
 
+config CVITEK_WATCHDOG
+	tristate "Cvitek Watchdog support"
+	depends on ARCH_CVITEK
+	select WATCHDOG_CORE
+	help
+		Watchdog for SG200x devices
+	
+
 config BD70528_WATCHDOG
 	tristate "ROHM BD70528 PMIC Watchdog"
 	depends on MFD_ROHM_BD70528

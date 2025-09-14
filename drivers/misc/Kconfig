@@ -466,6 +466,47 @@ config HISI_HIKEY_USB
 	  switching between the dual-role USB-C port and the USB-A host ports
 	  using only one USB controller.
 
+config WS2812B_GPIO
+	tristate "WS2812B GPIO-only LED driver for Lichee-Jack"
+	depends on ARCH_CV181X
+	help
+	 This driver provides support for WS2812B (NeoPixel) RGB LEDs
+	 using GPIO bit-banging on Cvitek CV181X-based boards such as
+	 the Lichee-Jack.
+
+	 Features:
+	   - Bit-banged WS2812B signal generation (no PWM/DMA required)
+	   - mmap() framebuffer interface for userspace
+	   - Kernel thread refresh loop (~30 FPS)
+	   - Optional power GPIO for LED VDD control
+
+	 Say 'M' to build this driver as a loadable module (ws2812b-gpio.ko).
+	 Say 'Y' to build it into the kernel.
+
+config MOD_SWITCH
+	tristate "SP3T MOD-SWITCH driver for Lichee-Jack"
+	depends on ARCH_CV181X
+	help
+	 This driver provides support for the SP3T RF mod-switch found on
+	 the Lichee-Jack board. It monitors two GPIO input lines (GPIOA_16
+	 and GPIOA_17, muxed from UART0 TX/RX) and reports the current switch
+	 position to userspace through a misc character device.
+
+	 The driver exports a single device node:
+
+	   /dev/modsw
+
+	 Reading from the device returns a single character:
+	   '0' = switch idle/unknown
+	   '1' = switch in position 1
+	   '2' = switch in position 2
+
+	 The driver polls the GPIO state periodically in a kernel thread
+	 (default 20 ms interval).
+
+	 Say 'M' to build this driver as a module (mod-switch.ko).
+	 Say 'Y' to build it into the kernel.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
