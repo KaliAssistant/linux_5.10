@@ -52,7 +52,7 @@
 #define DEVICE_NAME "modsw"
 #define GPIO_BASE   0x03020000
 #define GPIO_EXT    0x50   /* offset: GPIO_EXT_PORTA */
-#define GPIO_LINE1  16     /* GPIOA_16 */
+#define GPIO_LINE1  15     /* GPIOA_15 */
 #define GPIO_LINE2  17     /* GPIOA_17 */
 
 static void __iomem *gpio_base;
@@ -62,23 +62,23 @@ static char switch_state = '0';
 /**
  * modsw_get_state - Read GPIO pins and determine switch state
  *
- * This function reads the values of GPIOA_16 and GPIOA_17, then
+ * This function reads the values of GPIOA_15 and GPIOA_17, then
  * maps the pin combination to a logical switch state.
  *
  * Return:
- * * '1' - switch in position 1 (GPIO16=1, GPIO17=0)
- * * '2' - switch in position 2 (GPIO16=0, GPIO17=1)
+ * * '1' - switch in position 1 (GPIO15=1, GPIO17=0)
+ * * '2' - switch in position 2 (GPIO15=0, GPIO17=1)
  * * '0' - idle or invalid state (any other combination)
  */
 static char modsw_get_state(void)
 {
     u32 val = readl(gpio_base + GPIO_EXT);
-    int a16 = !!(val & (1 << GPIO_LINE1));
+    int a15 = !!(val & (1 << GPIO_LINE1));
     int a17 = !!(val & (1 << GPIO_LINE2));
 
-    if (!a16 && a17)
+    if (!a15 && a17)
         return '1';
-    else if (a16 && !a17)
+    else if (a15 && !a17)
         return '2';
     else
         return '0';
