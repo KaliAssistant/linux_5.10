@@ -82,6 +82,9 @@
 #define GPIO_LINE 25
 #define PWR_GPIO_LINE 27
 
+#define KTHR_USLEEP_MIN 2000
+#define KTHR_USLEEP_MAX 9000
+
 static void __iomem *gpio_base;
 static void __iomem *gpio_dir;
 static uint8_t *framebuf;
@@ -187,7 +190,7 @@ static int ws_thread_fn(void *data)
         for (i = 0; i < LED_COUNT; i++) {
             ws2812b_send_led(framebuf[i*3 + 0], framebuf[i*3 + 1], framebuf[i*3 + 2]);
         }
-        usleep_range(31000, 33333);
+        usleep_range(KTHR_USLEEP_MIN, KTHR_USLEEP_MAX);
     }
     return 0;
 }
@@ -245,15 +248,16 @@ static int __init ws2812b_init(void)
     
     gpio_dir = ioremap(GPIO_DIR, 0x1000);
     if (!gpio_dir) {
-        pr_err("Failed to map GPIO direction registers\n");
-        return -ENOMEM;
+        pr_err("ws2812b-gpio: Failed to map GPIO direction registers\n");
+        ret = -ENOMEM;
+        goto out;
     }
     
     gpio_base = ioremap(GPIO_BASE, 0x1000);
     if (!gpio_base) {
-        pr_err("Failed to map GPIO registers\n");
-        iounmap(gpio_dir);
-        return -ENOMEM;
+        pr_err("ws2812b-gpio: Failed to map GPIO registers\n");
+        ret = -ENOMEM;
+        goto unmap_dir;
     }
 
     
@@ -273,34 +277,53 @@ static int __init ws2812b_init(void)
             
     framebuf = (uint8_t *)__get_free_pages(GFP_KERNEL, 0); // 1 page
     if (!framebuf) {
-        iounmap(gpio_dir);
-        iounmap(gpio_base);
-        return -ENOMEM;
+        pr_err("ws2812b-gpio: Failed to get framebuf\n");
+        ret = -ENOMEM;
+        goto unmap_base;
     }
     memset(framebuf, 0, PAGE_SIZE);
     
     ret = misc_register(&ws_dev);
     if (ret) {
-        pr_err("Failed to register misc device\n");
+        pr_err("ws2812b-gpio: Failed to register misc device\n");
         free_pages((unsigned long)framebuf, 0);
-        iounmap(gpio_dir);
-        iounmap(gpio_base);
-        return ret;
+        goto _free_pages_;
     }
 
     power_on();
     
     ws_thread = kthread_run(ws_thread_fn, NULL, "ws2812b_thread");
     if (IS_ERR(ws_thread)) {
-        misc_deregister(&ws_dev);
-        free_pages((unsigned long)framebuf, 0);
-        iounmap(gpio_dir);
-        iounmap(gpio_base);
-        return PTR_ERR(ws_thread);
+        ret = PTR_ERR(ws_thread);
+        pr_err("ws2812b-gpio: kthread_run failed: %d\n", ret);
+        ws_thread = NULL;
+        goto dereg_misc;
     }
 
-    pr_info("WS2812B driver loaded\n");
+    pr_info("ws2812b-gpio: WS2812B driver loaded\n");
     return 0;
+
+dereg_misc:
+    misc_deregister(&ws_dev);
+
+_free_pages_:
+    if (framebuf) {
+        free_pages((unsigned long)framebuf, 0);
+        framebuf = NULL;
+    }
+
+unmap_base:
+    if (gpio_base) {
+        iounmap(gpio_base);
+        gpio_base = NULL;
+    }
+unmap_dir:
+    if (gpio_dir) {
+        iounmap(gpio_dir);
+        gpio_dir = NULL;
+    }
+out:
+    return ret;
 }
 
 
@@ -318,10 +341,23 @@ static void __exit ws2812b_exit(void)
         kthread_stop(ws_thread);
 
     misc_deregister(&ws_dev);
-    free_pages((unsigned long)framebuf, 0);
-    iounmap(gpio_dir);
-    iounmap(gpio_base);
-    pr_info("WS2812B driver unloaded\n");
+
+    if (framebuf) {
+        free_pages((unsigned long)framebuf, 0);
+        framebuf = NULL;
+    }
+
+    if (gpio_dir) {
+        iounmap(gpio_dir);
+        gpio_dir = NULL;
+    }
+
+    if (gpio_base) {
+        iounmap(gpio_base);
+        gpio_base = NULL;
+    }
+
+    pr_info("ws2812b-gpio: WS2812B driver unloaded\n");
 }
 
 module_init(ws2812b_init);
