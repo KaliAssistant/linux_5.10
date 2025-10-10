@@ -119,6 +119,8 @@ ssize_t cvi_saradc_read(struct file *filp, char *buff, size_t count, loff_t *off
 	uint32_t value;
 	uint32_t adc_value;
 	unsigned long flags = 0;
+  char outbuf[16];
+  int len;
 
 	if (!ndev->saradc_vaddr) {
 		pr_err("Please write channel before read value\n");
@@ -145,9 +147,14 @@ ssize_t cvi_saradc_read(struct file *filp, char *buff, size_t count, loff_t *off
 	adc_value = readl(ndev->saradc_vaddr + SARADC_CH1_RESULT + (ndev->channel_index - 1) * 4) & 0xFFF;
 	pr_debug("cvi_saradc channel%d value = %#X\n", ndev->channel_index, adc_value);
 
+  len = snprintf(outbuf, sizeof(outbuf), "%u\n", adc_value);
+  if (copy_to_user(buff, outbuf, len))
+    return -EFAULT;
+
+
 	spin_unlock_irqrestore(&ndev->close_lock, flags);
 
-	return 0;
+	return len;
 }
 
 ssize_t cvi_saradc_write(struct file *filp, const char *buff, size_t count, loff_t *offp)
