@@ -1,1 +1,1 @@
-../../uapi/linux/input-event-codes.h
+../../../../../include/uapi/linux/input-event-codes.h
