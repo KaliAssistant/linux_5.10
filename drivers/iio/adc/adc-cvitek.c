@@ -147,13 +147,17 @@ ssize_t cvi_saradc_read(struct file *filp, char *buff, size_t count, loff_t *off
 	adc_value = readl(ndev->saradc_vaddr + SARADC_CH1_RESULT + (ndev->channel_index - 1) * 4) & 0xFFF;
 	pr_debug("cvi_saradc channel%d value = %#X\n", ndev->channel_index, adc_value);
 
-  len = snprintf(outbuf, sizeof(outbuf), "%u\n", adc_value);
+  spin_unlock_irqrestore(&ndev->close_lock, flags);
+  
+  if (*offp > 0)
+    return 0; // EOF after first read
+
+  len = scnprintf(outbuf, sizeof(outbuf), "%u\n", adc_value);
+
   if (copy_to_user(buff, outbuf, len))
     return -EFAULT;
 
-
-	spin_unlock_irqrestore(&ndev->close_lock, flags);
-
+  *offp += len;
 	return len;
 }
 

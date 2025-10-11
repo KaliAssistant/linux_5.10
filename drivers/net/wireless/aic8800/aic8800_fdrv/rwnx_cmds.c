@@ -46,8 +46,8 @@ static void cmd_complete(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd)
 	//RWNX_DBG(RWNX_FN_ENTRY_STR);
 	lockdep_assert_held(&cmd_mgr->lock);
 
-	list_del(&cmd->list);
-	cmd_mgr->queue_sz--;
+	//list_del(&cmd->list);
+	//cmd_mgr->queue_sz--;
 
 	cmd->flags |= RWNX_CMD_FLAG_DONE;
 	if (cmd->flags & RWNX_CMD_FLAG_NONBLOCK) {
@@ -109,6 +109,20 @@ int cmd_mgr_queue_force_defer(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd
 	return 0;
 }
 
+#if 1
+static void aic8800_start_system_reset_flow(struct aic_sdio_dev *aic)
+{
+    int ret = 0;
+    char *event_string = "DHDISDOWN=1";
+    char *envp[] = { event_string, NULL };
+    printk(KERN_ERR "wlan error reset flow.\n");
+    printk(KERN_ERR "send event.\n");
+	ret=kobject_uevent_env(&aic->dev->kobj, KOBJ_CHANGE,envp);
+	if(!ret)
+	   printk(KERN_ERR "wlan error event send.\n");
+}
+#endif
+
 static int cmd_mgr_queue(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd)
 {
 #ifdef AICWF_SDIO_SUPPORT
@@ -119,12 +133,32 @@ static int cmd_mgr_queue(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd)
 	struct aic_usb_dev *usbdev = container_of(cmd_mgr, struct aic_usb_dev, cmd_mgr);
 #endif
 	bool defer_push = false;
+	u8_l empty = 0;
 
 	//RWNX_DBG(RWNX_FN_ENTRY_STR);
 #ifdef CREATE_TRACE_POINTS
 	trace_msg_send(cmd->id);
 #endif
-	spin_lock_bh(&cmd_mgr->lock);
+	if(cmd->e2a_msg != NULL) {
+		do {
+			if(cmd_mgr->state == RWNX_CMD_MGR_STATE_CRASHED)
+				break;
+			spin_lock_bh(&cmd_mgr->lock);
+			empty = list_empty(&cmd_mgr->cmds);
+			if(!empty) {
+				spin_unlock_bh(&cmd_mgr->lock);
+				if(in_softirq()) {
+					printk("in_softirq:check cmdqueue empty\n");
+					mdelay(10);
+				} else {
+					printk("check cmdqueue empty\n");
+					msleep(50);
+				}
+			}
+		} while(!empty);//wait for cmd queue empty
+	} else {
+		spin_lock_bh(&cmd_mgr->lock);
+	}
 
 	if (cmd_mgr->state == RWNX_CMD_MGR_STATE_CRASHED) {
 		printk(KERN_CRIT"cmd queue crashed\n");
@@ -223,6 +257,8 @@ static int cmd_mgr_queue(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd)
 			}
 		#endif
 
+			aic8800_start_system_reset_flow(sdiodev);
+
 			cmd_dump(cmd);
 			spin_lock_bh(&cmd_mgr->lock);
 			cmd_mgr->state = RWNX_CMD_MGR_STATE_CRASHED;
@@ -232,6 +268,10 @@ static int cmd_mgr_queue(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd)
 			}
 			spin_unlock_bh(&cmd_mgr->lock);
 		} else {
+			spin_lock_bh(&cmd_mgr->lock);
+			list_del(&cmd->list);
+			cmd_mgr->queue_sz--;
+			spin_unlock_bh(&cmd_mgr->lock);
 			rwnx_cmd_free(cmd);//kfree(cmd);
 			if (!list_empty(&cmd_mgr->cmds))
 				WAKE_CMD_WORK(cmd_mgr);
@@ -339,6 +379,8 @@ void cmd_mgr_task_process(struct work_struct *work)
 					sdio_err("reg:%d write failed!\n", sdiodev->sdio_reg.wakeup_reg);
 				}
 #endif
+				aic8800_start_system_reset_flow(sdiodev);
+
 				cmd_dump(next);
 				spin_lock_bh(&cmd_mgr->lock);
 				cmd_mgr->state = RWNX_CMD_MGR_STATE_CRASHED;
@@ -347,8 +389,13 @@ void cmd_mgr_task_process(struct work_struct *work)
 					cmd_complete(cmd_mgr, next);
 				}
 				spin_unlock_bh(&cmd_mgr->lock);
-			} else
+			} else {
+				spin_lock_bh(&cmd_mgr->lock);
+				list_del(&next->list);
+				cmd_mgr->queue_sz--;
+				spin_unlock_bh(&cmd_mgr->lock);
 				rwnx_cmd_free(next);//kfree(next);
+			}
 		}
 	}
 
@@ -517,7 +564,7 @@ void aicwf_set_cmd_tx(void *dev, struct lmac_msg *msg, uint len)
     if (sdiodev->chipid == PRODUCT_ID_AIC8801 || sdiodev->chipid == PRODUCT_ID_AIC8800DC ||
         sdiodev->chipid == PRODUCT_ID_AIC8800DW)
         buffer[3] = 0x0;
-    else if (sdiodev->chipid == PRODUCT_ID_AIC8800D80)
+    else if (sdiodev->chipid == PRODUCT_ID_AIC8800D80 || sdiodev->chipid == PRODUCT_ID_AIC8800D80X2)
 	    buffer[3] = crc8_ponl_107(&buffer[0], 3); // crc8
 	index += 4;
 	//there is a dummy word
