@@ -4,4 +4,5 @@ subdir-y += kendryte
 subdir-y += thead
 subdir-y += cvitek
 
+DTC_FLAGS += -I $(srctree)/include
 obj-$(CONFIG_BUILTIN_DTB) := $(addsuffix /, $(subdir-y))
