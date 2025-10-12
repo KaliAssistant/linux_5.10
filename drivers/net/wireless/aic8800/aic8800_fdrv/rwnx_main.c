@@ -5806,7 +5806,8 @@ int rwnx_cfg80211_init(struct rwnx_plat *rwnx_plat, void **platform_data)
 	vif = rwnx_interface_add(rwnx_hw, "wlan%d", NET_NAME_UNKNOWN,
 								NL80211_IFTYPE_STATION, NULL);
 
-#ifdef CONFIG_RWNX_MON_DATA
+#if 0 //dont auto create monitor iface whan module load!
+//#ifdef CONFIG_RWNX_MON_DATA
     /* Add an initial station interface */
     vif = rwnx_interface_add(rwnx_hw, "wlan%d", 1,
                                     NL80211_IFTYPE_MONITOR, NULL);
