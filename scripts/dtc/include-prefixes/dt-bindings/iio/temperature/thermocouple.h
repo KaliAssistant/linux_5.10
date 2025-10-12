@@ -1,1 +1,1 @@
-../../../../../include/dt-bindings/iio/temperature/thermocouple.h
+../../../../../../include/dt-bindings/iio/temperature/thermocouple.h

@@ -1,1 +1,1 @@
-../../../../../include/dt-bindings/iio/adc/fsl-imx25-gcq.h
+../../../../../../include/dt-bindings/iio/adc/fsl-imx25-gcq.h

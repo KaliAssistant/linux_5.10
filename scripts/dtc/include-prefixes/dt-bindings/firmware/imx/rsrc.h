@@ -1,1 +1,1 @@
-../../../../../include/dt-bindings/firmware/imx/rsrc.h
+../../../../../../include/dt-bindings/firmware/imx/rsrc.h
