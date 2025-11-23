@@ -5,7 +5,7 @@
  *
  * This driver provides support for the SP3T RF mod-switch found on
  * Lichee-Jack boards (CV181X SoC). The switch is connected to GPIOA_15
- * and GPIOA_17 (SPK_EN / UART0 RX muxed pins). The driver reads the GPIO state
+ * and GPIOA_24 (SPK_EN / EMMC_DAT1 muxed pins). The driver reads the GPIO state
  * and reports the current switch position through a misc character device.
  *
  * Features:
@@ -33,7 +33,7 @@
  *
  * Limitations:
  *   - Polling interval is fixed at 20 ms (can be tuned).
- *   - Only supports the SP3T switch via GPIOA_15/GPIOA_17.
+ *   - Only supports the SP3T switch via GPIOA_15/GPIOA_24.
  *   - No interrupt-driven support (GPIO IRQ not used).
  *
  * Author: KaliAssistant <work.kaliassistant.github@gmail.com>
@@ -54,37 +54,37 @@
 #define GPIO_BASE   0x03020000
 #define GPIO_EXT    0x50   /* offset: GPIO_EXT_PORTA */
 #define GPIO_LINE1  15     /* GPIOA_15 */
-#define GPIO_LINE2  17     /* GPIOA_17 */
+#define GPIO_LINE2  24     /* GPIOA_24 */
 
 static unsigned long PINCFG_A15_REG = 0x03001908UL;
-static unsigned long PINCFG_A17_REG = 0x03001910UL;
+static unsigned long PINCFG_A24_REG = 0x0300192CUL;
 
 static void __iomem *gpio_base;
 static void __iomem *pincfg_a15_v;
-static void __iomem *pincfg_a17_v;
+static void __iomem *pincfg_a24_v;
 static struct task_struct *modsw_thread;
 static char switch_state = '0';
 
 /**
  * modsw_get_state - Read GPIO pins and determine switch state
  *
- * This function reads the values of GPIOA_15 and GPIOA_17, then
+ * This function reads the values of GPIOA_15 and GPIOA_24, then
  * maps the pin combination to a logical switch state.
  *
  * Return:
- * * '1' - switch in position 1 (GPIO15=1, GPIO17=0)
- * * '2' - switch in position 2 (GPIO15=0, GPIO17=1)
+ * * '1' - switch in position 1 (GPIO15=1, GPIO24=0)
+ * * '2' - switch in position 2 (GPIO15=0, GPIO24=1)
  * * '0' - idle or invalid state (any other combination)
  */
 static char modsw_get_state(void)
 {
     u32 val = readl(gpio_base + GPIO_EXT);
     int a15 = !!(val & (1 << GPIO_LINE1));
-    int a17 = !!(val & (1 << GPIO_LINE2));
+    int a24 = !!(val & (1 << GPIO_LINE2));
 
-    if (!a15 && a17)
+    if (!a15 && a24)
         return '1';
-    else if (a15 && !a17)
+    else if (a15 && !a24)
         return '2';
     else
         return '0';
@@ -183,9 +183,9 @@ static int __init modsw_init(void)
         goto out;
     }
 
-    pincfg_a17_v = ioremap(PINCFG_A17_REG, 0x1000);
-    if (!pincfg_a17_v) {
-        pr_err("modsw: failed to map pincfg_a17 page\n");
+    pincfg_a24_v = ioremap(PINCFG_A24_REG, 0x1000);
+    if (!pincfg_a24_v) {
+        pr_err("modsw: failed to map pincfg_a24 page\n");
         ret = -ENOMEM;
         goto unmap_a15;
     }
@@ -194,11 +194,11 @@ static int __init modsw_init(void)
     if (!gpio_base) {
         pr_err("modsw: failed to map GPIO registers\n");
         ret = -ENOMEM;
-        goto unmap_a17;
+        goto unmap_a24;
     }
 
     set_pin_pu_pd(pincfg_a15_v, 2, 3);
-    set_pin_pu_pd(pincfg_a17_v, 2, 3);
+    set_pin_pu_pd(pincfg_a24_v, 2, 3);
 
     ret = misc_register(&modsw_dev);
     if (ret) {
@@ -226,10 +226,10 @@ unmap_gpio:
         gpio_base = NULL;
     }
 
-unmap_a17:
-    if (pincfg_a17_v) {
-        iounmap(pincfg_a17_v);
-        pincfg_a17_v = NULL;
+unmap_a24:
+    if (pincfg_a24_v) {
+        iounmap(pincfg_a24_v);
+        pincfg_a24_v = NULL;
     }
 
 unmap_a15:
@@ -266,9 +266,9 @@ static void __exit modsw_exit(void)
         pincfg_a15_v = NULL;
     }
 
-    if (pincfg_a17_v) {
-        iounmap(pincfg_a17_v);
-        pincfg_a17_v = NULL;
+    if (pincfg_a24_v) {
+        iounmap(pincfg_a24_v);
+        pincfg_a24_v = NULL;
     }
 
     pr_info("modsw: driver unloaded\n");
