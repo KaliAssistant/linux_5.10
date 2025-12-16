@@ -11,6 +11,8 @@
 #include <linux/io.h>
 #include <linux/cv180x_efuse.h>
 
+// #define NEW_ETH_DETECT
+
 #define REG_EPHY_TOP_WRAP 0x03009800
 #define REG_EPHY_BASE 0x03009000
 #define EPHY_EFUSE_TXECHORC_FLAG 0x00000100 // bit 8
@@ -19,8 +21,11 @@
 
 #define CVI_INT_EVENTS \
 	(CVI_LNK_STS_CHG_INT_MSK | CVI_MGC_PKT_DET_INT_MSK)
+
+#ifdef NEW_ETH_DETECT
 static u32 link_status;
 static u32 retry_time;
+#endif
 static int cv182xa_phy_config_intr(struct phy_device *phydev)
 {
 	return 0;
@@ -33,10 +38,22 @@ static int cv182xa_phy_ack_interrupt(struct phy_device *phydev)
 
 static int cv182xa_read_status(struct phy_device *phydev)
 {
+#ifdef NEW_ETH_DETECT
 	u32 lp_val, lp_val_cap, cap_val, cap_val_temp, i, ramdom_cap;
 	u32 get_random;
+	static void __iomem *ADC3_register;
+	static void __iomem *ADC2_register;
+
+	if (!ADC3_register) {
+		ADC3_register = ioremap(0x030010F0, 0x8);
+		if (!ADC3_register)
+			pr_err("ioremap failed!!!");
+		ADC2_register = ADC3_register + 4;
+	}
+#endif
 	int err = genphy_read_status(phydev);
-	//pr_notice("link status=%x, retry_time=%x\n", phydev->link, retry_time);
+#ifdef NEW_ETH_DETECT
+	// pr_notice("link status=%x, retry_time=%x\n", phydev->link, retry_time);
 	if (retry_time > 0)
 		retry_time--;
 
@@ -47,7 +64,7 @@ static int cv182xa_read_status(struct phy_device *phydev)
 	} else if (phydev->speed == SPEED_100 && link_status == 0) {
 		link_status = 1;
 		lp_val = phy_read(phydev, 0x5);
-		pr_notice("lp1=%x\n", lp_val);
+		pr_err("lp1=%x\n", lp_val);
 		if (phydev->autoneg == AUTONEG_ENABLE && lp_val == 0x4d61) {
 			cap_val = phy_read(phydev, 0x4);
 			pr_notice("cap1=%x\n", cap_val);
@@ -66,7 +83,7 @@ static int cv182xa_read_status(struct phy_device *phydev)
 			cap_val_temp = cap_val & ~0xde0 | ramdom_cap;
 			phy_write(phydev, 0x4, cap_val_temp);
 			pr_notice("get_random=%x, ramdom_cap=%x, cap_val_temp=%x\n",
-				 get_random, ramdom_cap, cap_val_temp);
+				  get_random, ramdom_cap, cap_val_temp);
 			for (i = 0; i < 150; i++) {
 				if ((phy_read(phydev, 0x1) & 0x20) == 0)
 					break;
@@ -97,7 +114,7 @@ static int cv182xa_read_status(struct phy_device *phydev)
 				//mdelay(8000);
 				//lp_val = phy_read(phydev, 0x5);
 				pr_notice(" %d, true link status=%x, lp2=%x\n", i,
-					 phy_read(phydev, 0x1), phy_read(phydev, 0x5));
+					  phy_read(phydev, 0x1), phy_read(phydev, 0x5));
 			} else {
 				phydev->link = 0;
 				link_status = 0;
@@ -107,7 +124,7 @@ static int cv182xa_read_status(struct phy_device *phydev)
 				//lp_val = phy_read(phydev, 0x5);
 				//pr_notice("lp3=%x\n", lp_val);
 				pr_notice(" %d, false link status=%x, lp2=%x\n", i,
-					 phy_read(phydev, 0x1), phy_read(phydev, 0x5));
+					  phy_read(phydev, 0x1), phy_read(phydev, 0x5));
 			}
 
 			//err = genphy_read_status(phydev);
@@ -115,6 +132,27 @@ static int cv182xa_read_status(struct phy_device *phydev)
 			//pr_notice("lp3=%x\n", lp_val);
 		}
 	}
+
+	if (phydev->speed == SPEED_100) {
+		phy_write(phydev, 0x1f, 0x100);
+		if (phydev->link == 0) {
+			// select LED_LNK/SPD/DPX out to LED_PAD
+			phy_write(phydev, 0x1a, phy_read(phydev, 0x1a) | 0xf00);
+			if (ADC3_register) {
+				writel(0x3, ADC2_register);
+				writel(0x3, ADC3_register);
+			}
+
+		} else {
+			if (ADC3_register) {
+				writel(0x5, ADC2_register);
+				writel(0x5, ADC3_register);
+			}
+			phy_write(phydev, 0x1a, phy_read(phydev, 0x1a) & ~0xf00);
+		}
+		phy_write(phydev, 0x1f, 0x0);
+	}
+#endif
 	pr_debug("%s, speed=%d, duplex=%d, ", __func__, phydev->speed, phydev->duplex);
 	pr_debug("pasue=%d, asym_pause=%d, autoneg=%d ", phydev->pause, phydev->asym_pause, phydev->autoneg);
 
@@ -132,6 +170,7 @@ static int cv182xa_phy_aps_enable(struct phy_device *phydev)
 static int cv182xa_phy_config_aneg(struct phy_device *phydev)
 {
 	int ret;
+
 #if defined(CONFIG_CVITEK_PHY_UAPS)
 	cv182xa_phy_aps_enable(phydev); /* if phy not work, disable this function for try */
 #endif
@@ -191,7 +230,7 @@ static int cv182xa_phy_config_init(struct phy_device *phydev)
 
 	// // ANA INIT
 	// // @Switch to MII-page5
-	writel(0x0500, reg_ephy_base + 0x7c);
+	// writel(0x0500, reg_ephy_base + 0x7c);
 
 // Efuse register
 	// Set Double Bias Current
@@ -204,7 +243,7 @@ static int cv182xa_phy_config_init(struct phy_device *phydev)
 		writel((readl(reg_ephy_base + 0x64) & ~0xFFFF) | val, reg_ephy_base + 0x64);
 	} else
 		writel(0x5a5a, reg_ephy_base + 0x64);
-	writel(0x5a5a, reg_ephy_base + 0x64); //Eye Diagram is better with short line
+
 	// Set Echo_I
 	// Set rg_eth_txechoiadj reg_ephy_base + 0x54  [15:8]
 	if ((cvi_efuse_read_from_shadow(0x20) & EPHY_EFUSE_TXECHORC_FLAG) ==
@@ -225,7 +264,7 @@ static int cv182xa_phy_config_init(struct phy_device *phydev)
 		writel((readl(reg_ephy_base + 0x58) & ~0xFF0) | val, reg_ephy_base + 0x58);
 	} else
 		writel(0x0bb0, reg_ephy_base + 0x58);
-	writel(0x0bb0, reg_ephy_base + 0x58); //Eye Diagram is better with short line
+
 // ETH_100BaseT
 	// Set Rise update
 	writel(0x0c10, reg_ephy_base + 0x5c);
@@ -376,6 +415,18 @@ static int cv182xa_phy_config_init(struct phy_device *phydev)
 	// select LED_LNK/SPD/DPX out to LED_PAD
 	writel((readl(reg_ephy_base + 0x68) & ~0x0f00), reg_ephy_base + 0x68);
 
+#ifdef NEW_ETH_DETECT
+// led pol
+	// Switch to MII-page0
+	writel(0x0, reg_ephy_base + 0x7c);
+	// printk(KERN_EMERG "ethernet: reg_ephy_base + 0x4c   %lx\n",readl(reg_ephy_base + 0x4c));
+	// printk(KERN_EMERG "---------------\n");
+
+	// h13 10~8 LED polarity invert, 0(high-active),1(low-active)
+	writel((readl(reg_ephy_base + 0x4c) | 0x0700), reg_ephy_base + 0x4c);
+	//printk("ethernet: reg_ephy_base + 0x4c %lx\n\n\n",readl(reg_ephy_base + 0x4c));
+	// printk(KERN_EMERG "---------------\n");
+#endif
 	// Switch to MII-page19
 	writel(0x1300, reg_ephy_base + 0x7c);
 	writel(0x0012, reg_ephy_base + 0x58);
@@ -412,11 +463,14 @@ static int cv182xa_phy_config_init(struct phy_device *phydev)
 	// from jinyu.zhao
 	/* EPHY is configured as half-duplex after reset, but we need force full-duplex */
 	writel((readl(reg_ephy_base) | 0x100), reg_ephy_base);
-	//writel((readl(reg_ephy_base + 0x10) & ~0x80), reg_ephy_base + 0x10);
+
 	// switch to MDIO control by ETH_MAC
 	writel(0x0000, reg_ephy_top_wrap + 4);
+
+#ifdef NEW_ETH_DETECT
 	link_status = 0;
 	retry_time = 0;
+#endif
 	iounmap(reg_ephy_base);
 err_ephy_mem_2:
 	iounmap(reg_ephy_top_wrap);
@@ -424,22 +478,6 @@ err_ephy_mem_1:
 	return ret;
 }
 
-static int cvi_genphy_suspend(struct phy_device *phydev)
-{
-	return 0;
-}
-
-static int cvi_genphy_resume(struct phy_device *phydev)
-{
-	int ret;
-
-	ret = cv182xa_phy_config_init(phydev);
-	if (ret < 0)
-		return ret;
-	ret = genphy_config_aneg(phydev);
-	//return phy_clear_bits(phydev, MII_BMCR, BMCR_PDOWN);
-	return 0;
-}
 static struct phy_driver cv182xa_phy_driver[] = {
 {
 	.phy_id		= 0x00435649,
@@ -452,8 +490,8 @@ static struct phy_driver cv182xa_phy_driver[] = {
 	.ack_interrupt	= cv182xa_phy_ack_interrupt,
 	.config_intr	= cv182xa_phy_config_intr,
 	.aneg_done	= genphy_aneg_done,
-	.suspend	= cvi_genphy_suspend,
-	.resume		= cvi_genphy_resume,
+	.suspend	= genphy_suspend,
+	.resume		= genphy_resume,
 	.set_loopback   = genphy_loopback,
 } };
 
