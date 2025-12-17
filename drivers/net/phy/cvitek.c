@@ -10,7 +10,7 @@
 #include <linux/bitops.h>
 #include <linux/io.h>
 #include <linux/cv180x_efuse.h>
-#include <linux/jiffies.h>
+
 
 #define REG_EPHY_TOP_WRAP 0x03009800
 #define REG_EPHY_BASE 0x03009000
@@ -22,16 +22,6 @@
 	(CVI_LNK_STS_CHG_INT_MSK | CVI_MGC_PKT_DET_INT_MSK)
 static u32 link_status;
 static u32 retry_time;
-#define CVI_LINK_VALIDATE_TIME   (5 * HZ)
-#define CVI_REAL_LINK_MAX_DELAY   (10 * HZ)   /* real plug happens fast */
-#define CVI_LINK_CONFIRM_TIME   (5 * HZ)   /* must stay UP */
-
-
-//static unsigned long link_up_jiffies;
-//static bool link_valid;
-static unsigned long last_link_down;
-static unsigned long link_up_since;
-
 
 static int cv182xa_phy_config_intr(struct phy_device *phydev)
 {
@@ -60,10 +50,10 @@ static int cv182xa_read_status(struct phy_device *phydev)
 	} else if (phydev->speed == SPEED_100 && link_status == 0) {
 		link_status = 1;
 		lp_val = phy_read(phydev, 0x5);
-		pr_notice("lp1=%x\n", lp_val);
+		pr_debug("lp1=%x\n", lp_val);
 		if (phydev->autoneg == AUTONEG_ENABLE && lp_val == 0x4de1) {
 			cap_val = phy_read(phydev, 0x4);
-			pr_notice("cap1=%x\n", cap_val);
+			pr_debug("cap1=%x\n", cap_val);
 			get_random_bytes(&get_random, sizeof(int32_t));
 			//ramdom_cap = (get_random % 13) << 5;
 			//if(ramdom_cap == 0x160)
@@ -73,12 +63,12 @@ static int cv182xa_read_status(struct phy_device *phydev)
 			//cap_val_temp = cap_val & ~0x1e0 | ramdom_cap;
 			ramdom_cap =  get_random & 0xde0 | 0x20;
 			if (ramdom_cap == 0xd60) {
-				pr_notice("ramdom_cap=%x\n\n", ramdom_cap);
+				pr_debug("ramdom_cap=%x\n\n", ramdom_cap);
 				ramdom_cap = 0xde0;
 			}
 			cap_val_temp = cap_val & ~0xde0 | ramdom_cap;
 			phy_write(phydev, 0x4, cap_val_temp);
-			pr_notice("get_random=%x, ramdom_cap=%x, cap_val_temp=%x\n",
+			pr_debug("get_random=%x, ramdom_cap=%x, cap_val_temp=%x\n",
 				 get_random, ramdom_cap, cap_val_temp);
 			for (i = 0; i < 150; i++) {
 				if ((phy_read(phydev, 0x1) & 0x20) == 0)
@@ -87,7 +77,7 @@ static int cv182xa_read_status(struct phy_device *phydev)
 				//mdelay(10);
         msleep(8);
 				}
-			pr_notice("i=%d\n", i);
+			pr_debug("i=%d\n", i);
 			phy_modify(phydev, MII_BMCR, BMCR_ISOLATE, BMCR_ANENABLE | BMCR_ANRESTART);
 			for (i = 0; i < 1000; i++) {
 				if (phy_read(phydev, 0x1) & 0x20)
@@ -97,7 +87,7 @@ static int cv182xa_read_status(struct phy_device *phydev)
 			}
 			lp_val = phy_read(phydev, 0x5);
 			lp_val_cap = lp_val & 0xde0;
-			pr_notice(" %d, link status=%x, lp2=%x\n", i, phy_read(phydev, 0x1), lp_val);
+			pr_debug(" %d, link status=%x, lp2=%x\n", i, phy_read(phydev, 0x1), lp_val);
 
 			if (((phy_read(phydev, 0x1) & 0x4) != 0) && lp_val != 0 && lp_val_cap != ramdom_cap) {
 				retry_time = 10;
@@ -112,7 +102,7 @@ static int cv182xa_read_status(struct phy_device *phydev)
 				}
 				//mdelay(8000);
 				//lp_val = phy_read(phydev, 0x5);
-				pr_notice(" %d, true link status=%x, lp2=%x\n", i,
+				pr_debug(" %d, true link status=%x, lp2=%x\n", i,
 					 phy_read(phydev, 0x1), phy_read(phydev, 0x5));
 			} else {
 				phydev->link = 0;
@@ -122,7 +112,7 @@ static int cv182xa_read_status(struct phy_device *phydev)
 				//err = phy_start_aneg(phydev);
 				//lp_val = phy_read(phydev, 0x5);
 				//pr_notice("lp3=%x\n", lp_val);
-				pr_notice(" %d, false link status=%x, lp2=%x\n", i,
+				pr_debug(" %d, false link status=%x, lp2=%x\n", i,
 					 phy_read(phydev, 0x1), phy_read(phydev, 0x5));
 			}
 
