@@ -93,7 +93,7 @@ static int cv182xa_read_status(struct phy_device *phydev)
 				if (phy_read(phydev, 0x1) & 0x20)
 					break;
 				//mdelay(10);
-        msleep(8)
+        msleep(8);
 			}
 			lp_val = phy_read(phydev, 0x5);
 			lp_val_cap = lp_val & 0xde0;
