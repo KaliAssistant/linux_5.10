@@ -10,6 +10,7 @@
 #include <linux/bitops.h>
 #include <linux/io.h>
 #include <linux/cv180x_efuse.h>
+#include <linux/jiffies.h>
 
 #define REG_EPHY_TOP_WRAP 0x03009800
 #define REG_EPHY_BASE 0x03009000
@@ -21,6 +22,10 @@
 	(CVI_LNK_STS_CHG_INT_MSK | CVI_MGC_PKT_DET_INT_MSK)
 static u32 link_status;
 static u32 retry_time;
+#define CVI_LINK_VALIDATE_TIME   (5 * HZ)
+static unsigned long link_up_jiffies;
+static bool link_valid;
+
 static int cv182xa_phy_config_intr(struct phy_device *phydev)
 {
 	return 0;
@@ -127,49 +132,42 @@ static int cv182xa_read_status(struct phy_device *phydev)
 static int cv182xa_read_status(struct phy_device *phydev)
 {
 	int err;
-	u16 bmsr, lpa;
 
 	err = genphy_read_status(phydev);
 	if (err)
 		return err;
 
-	/* Read raw status */
-	bmsr = phy_read(phydev, MII_BMSR);
-	lpa  = phy_read(phydev, MII_LPA);
+	/* Link reported DOWN */
+	if (!phydev->link) {
+		link_valid = false;
+		link_up_jiffies = 0;
+		return 0;
+	}
 
 	/*
-	 * CVITEK EPHY BUG:
-	 * After cable unplug, BMSR_LSTATUS may stay 1 for several seconds.
-	 * If no link partner ability is present, force link down.
+	 * PHY reports link UP, but CV182XA generates
+	 * false link pulses when cable is unplugged.
+	 * Validate link stability over time.
 	 */
-	if ((bmsr & BMSR_LSTATUS) && lpa == 0) {
-		phydev->link = 0;
-		phydev->speed = SPEED_UNKNOWN;
-		phydev->duplex = DUPLEX_UNKNOWN;
+	if (!link_valid) {
+		if (!link_up_jiffies) {
+			link_up_jiffies = jiffies;
+			phydev->link = 0; /* suppress first UP */
+			return 0;
+		}
 
-		link_status = 0;
-		return 0;
+		if (time_before(jiffies,
+			link_up_jiffies + CVI_LINK_VALIDATE_TIME)) {
+			phydev->link = 0; /* still validating */
+			return 0;
+		}
+
+		/* Link stable long enough → accept */
+		link_valid = true;
 	}
-
-	/* Real link down */
-	if (!phydev->link) {
-		link_status = 0;
-		return 0;
-	}
-
-	/* Only run once per real link-up */
-	if (phydev->speed != SPEED_100 || link_status)
-		return 0;
-
-	if (phydev->autoneg != AUTONEG_ENABLE)
-		return 0;
-
-	/* Mark link handled */
-	link_status = 1;
 
 	return 0;
 }
-
 
 #if defined(CONFIG_CVITEK_PHY_UAPS)
 /* Ultra Auto Power Saving mode */
