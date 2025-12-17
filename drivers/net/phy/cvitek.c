@@ -24,10 +24,14 @@ static u32 link_status;
 static u32 retry_time;
 #define CVI_LINK_VALIDATE_TIME   (5 * HZ)
 #define CVI_REAL_LINK_MAX_DELAY   (10 * HZ)   /* real plug happens fast */
+#define CVI_LINK_CONFIRM_TIME   (5 * HZ)   /* must stay UP */
+
 
 //static unsigned long link_up_jiffies;
 //static bool link_valid;
 static unsigned long last_link_down;
+static unsigned long link_up_since;
+
 
 static int cv182xa_phy_config_intr(struct phy_device *phydev)
 {
@@ -134,35 +138,40 @@ static int cv182xa_read_status(struct phy_device *phydev)
 
 static int cv182xa_read_status(struct phy_device *phydev)
 {
-	int err;
+	int ret;
 
-	err = genphy_read_status(phydev);
-	if (err)
-		return err;
+	ret = genphy_read_status(phydev);
+	if (ret)
+		return ret;
 
-	/* Track real link-down moment */
+	/* Link is down → reset confirmation */
 	if (!phydev->link) {
-		last_link_down = jiffies;
+		link_up_since = 0;
 		return 0;
 	}
 
-	/*
-	 * CV182XA BUG:
-	 * After cable unplug, PHY reports LINK_UP again after ~50s.
-	 * That UP must be rejected.
-	 */
-	if (time_after(jiffies,
-		last_link_down + CVI_REAL_LINK_MAX_DELAY)) {
+	/* First observation of link-up */
+	if (!link_up_since) {
+		link_up_since = jiffies;
 
-		/* Suppress fake link-up */
+		/* Do not report UP yet */
 		phydev->link = 0;
 		phydev->speed = SPEED_UNKNOWN;
 		phydev->duplex = DUPLEX_UNKNOWN;
-
 		return 0;
 	}
 
-	/* Valid link-up (plugged cable) */
+	/* Link has not been up long enough */
+	if (time_before(jiffies,
+			link_up_since + CVI_LINK_CONFIRM_TIME)) {
+
+		phydev->link = 0;
+		phydev->speed = SPEED_UNKNOWN;
+		phydev->duplex = DUPLEX_UNKNOWN;
+		return 0;
+	}
+
+	/* Link is confirmed stable → real cable */
 	return 0;
 }
 
