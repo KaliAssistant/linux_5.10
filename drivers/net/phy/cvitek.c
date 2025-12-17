@@ -138,40 +138,31 @@ static int cv182xa_read_status(struct phy_device *phydev)
 
 static int cv182xa_read_status(struct phy_device *phydev)
 {
-	int ret;
+	int err;
 
-	ret = genphy_read_status(phydev);
-	if (ret)
-		return ret;
+	err = genphy_read_status(phydev);
+	if (err)
+		return err;
 
-	/* Link is down → reset confirmation */
 	if (!phydev->link) {
-		link_up_since = 0;
+		last_link_down = jiffies;
 		return 0;
 	}
 
-	/* First observation of link-up */
-	if (!link_up_since) {
-		link_up_since = jiffies;
-
-		/* Do not report UP yet */
-		phydev->link = 0;
-		phydev->speed = SPEED_UNKNOWN;
-		phydev->duplex = DUPLEX_UNKNOWN;
-		return 0;
-	}
-
-	/* Link has not been up long enough */
-	if (time_before(jiffies,
-			link_up_since + CVI_LINK_CONFIRM_TIME)) {
+	/* Reject UP if cable was down too long ago */
+	if (time_after(jiffies,
+		last_link_down + CVI_REAL_LINK_MAX_DELAY)) {
 
 		phydev->link = 0;
 		phydev->speed = SPEED_UNKNOWN;
 		phydev->duplex = DUPLEX_UNKNOWN;
+
+		/* IMPORTANT: tell phylib "still down" */
+		phydev->state = PHY_NOLINK;
+
 		return 0;
 	}
 
-	/* Link is confirmed stable → real cable */
 	return 0;
 }
 
