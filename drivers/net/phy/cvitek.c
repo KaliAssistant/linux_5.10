@@ -43,7 +43,7 @@ static int cv182xa_phy_ack_interrupt(struct phy_device *phydev)
 	return 0;
 }
 
-/*
+
 static int cv182xa_read_status(struct phy_device *phydev)
 {
 	u32 lp_val, lp_val_cap, cap_val, cap_val_temp, i, ramdom_cap;
@@ -84,14 +84,16 @@ static int cv182xa_read_status(struct phy_device *phydev)
 				if ((phy_read(phydev, 0x1) & 0x20) == 0)
 					break;
 
-				mdelay(10);
+				//mdelay(10);
+        msleep(8);
 				}
 			pr_notice("i=%d\n", i);
 			phy_modify(phydev, MII_BMCR, BMCR_ISOLATE, BMCR_ANENABLE | BMCR_ANRESTART);
 			for (i = 0; i < 1000; i++) {
 				if (phy_read(phydev, 0x1) & 0x20)
 					break;
-				mdelay(10);
+				//mdelay(10);
+        msleep(8)
 			}
 			lp_val = phy_read(phydev, 0x5);
 			lp_val_cap = lp_val & 0xde0;
@@ -105,7 +107,8 @@ static int cv182xa_read_status(struct phy_device *phydev)
 					if (phy_read(phydev, 0x1) & 0x20)
 						break;
 
-					mdelay(10);
+					//mdelay(10);
+          msleep(8);
 				}
 				//mdelay(8000);
 				//lp_val = phy_read(phydev, 0x5);
@@ -134,37 +137,7 @@ static int cv182xa_read_status(struct phy_device *phydev)
 	return err;
 }
 
-*/
 
-static int cv182xa_read_status(struct phy_device *phydev)
-{
-	int err;
-
-	err = genphy_read_status(phydev);
-	if (err)
-		return err;
-
-	if (!phydev->link) {
-		last_link_down = jiffies;
-		return 0;
-	}
-
-	/* Reject UP if cable was down too long ago */
-	if (time_after(jiffies,
-		last_link_down + CVI_REAL_LINK_MAX_DELAY)) {
-
-		phydev->link = 0;
-		phydev->speed = SPEED_UNKNOWN;
-		phydev->duplex = DUPLEX_UNKNOWN;
-
-		/* IMPORTANT: tell phylib "still down" */
-		phydev->state = PHY_NOLINK;
-
-		return 0;
-	}
-
-	return 0;
-}
 
 
 #if defined(CONFIG_CVITEK_PHY_UAPS)
