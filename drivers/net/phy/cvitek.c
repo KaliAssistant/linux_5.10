@@ -61,7 +61,7 @@ static int cv182xa_read_status(struct phy_device *phydev)
 		link_status = 1;
 		lp_val = phy_read(phydev, 0x5);
 		pr_notice("lp1=%x\n", lp_val);
-		if (phydev->autoneg == AUTONEG_ENABLE && lp_val == 0x4d61) {
+		if (phydev->autoneg == AUTONEG_ENABLE && lp_val == 0x4de1) {
 			cap_val = phy_read(phydev, 0x4);
 			pr_notice("cap1=%x\n", cap_val);
 			get_random_bytes(&get_random, sizeof(int32_t));
