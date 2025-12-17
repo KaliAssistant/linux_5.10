@@ -31,6 +31,7 @@ static int cv182xa_phy_ack_interrupt(struct phy_device *phydev)
 	return 0;
 }
 
+/*
 static int cv182xa_read_status(struct phy_device *phydev)
 {
 	u32 lp_val, lp_val_cap, cap_val, cap_val_temp, i, ramdom_cap;
@@ -120,6 +121,55 @@ static int cv182xa_read_status(struct phy_device *phydev)
 
 	return err;
 }
+
+*/
+
+static int cv182xa_read_status(struct phy_device *phydev)
+{
+	int err;
+	u16 bmsr, lpa;
+
+	err = genphy_read_status(phydev);
+	if (err)
+		return err;
+
+	/* Read raw status */
+	bmsr = phy_read(phydev, MII_BMSR);
+	lpa  = phy_read(phydev, MII_LPA);
+
+	/*
+	 * CVITEK EPHY BUG:
+	 * After cable unplug, BMSR_LSTATUS may stay 1 for several seconds.
+	 * If no link partner ability is present, force link down.
+	 */
+	if ((bmsr & BMSR_LSTATUS) && lpa == 0) {
+		phydev->link = 0;
+		phydev->speed = SPEED_UNKNOWN;
+		phydev->duplex = DUPLEX_UNKNOWN;
+
+		link_status = 0;
+		return 0;
+	}
+
+	/* Real link down */
+	if (!phydev->link) {
+		link_status = 0;
+		return 0;
+	}
+
+	/* Only run once per real link-up */
+	if (phydev->speed != SPEED_100 || link_status)
+		return 0;
+
+	if (phydev->autoneg != AUTONEG_ENABLE)
+		return 0;
+
+	/* Mark link handled */
+	link_status = 1;
+
+	return 0;
+}
+
 
 #if defined(CONFIG_CVITEK_PHY_UAPS)
 /* Ultra Auto Power Saving mode */
