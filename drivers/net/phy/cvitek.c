@@ -23,8 +23,11 @@
 static u32 link_status;
 static u32 retry_time;
 #define CVI_LINK_VALIDATE_TIME   (5 * HZ)
-static unsigned long link_up_jiffies;
-static bool link_valid;
+#define CVI_REAL_LINK_MAX_DELAY   (10 * HZ)   /* real plug happens fast */
+
+//static unsigned long link_up_jiffies;
+//static bool link_valid;
+static unsigned long last_link_down;
 
 static int cv182xa_phy_config_intr(struct phy_device *phydev)
 {
@@ -137,37 +140,32 @@ static int cv182xa_read_status(struct phy_device *phydev)
 	if (err)
 		return err;
 
-	/* Link reported DOWN */
+	/* Track real link-down moment */
 	if (!phydev->link) {
-		link_valid = false;
-		link_up_jiffies = 0;
+		last_link_down = jiffies;
 		return 0;
 	}
 
 	/*
-	 * PHY reports link UP, but CV182XA generates
-	 * false link pulses when cable is unplugged.
-	 * Validate link stability over time.
+	 * CV182XA BUG:
+	 * After cable unplug, PHY reports LINK_UP again after ~50s.
+	 * That UP must be rejected.
 	 */
-	if (!link_valid) {
-		if (!link_up_jiffies) {
-			link_up_jiffies = jiffies;
-			phydev->link = 0; /* suppress first UP */
-			return 0;
-		}
+	if (time_after(jiffies,
+		last_link_down + CVI_REAL_LINK_MAX_DELAY)) {
 
-		if (time_before(jiffies,
-			link_up_jiffies + CVI_LINK_VALIDATE_TIME)) {
-			phydev->link = 0; /* still validating */
-			return 0;
-		}
+		/* Suppress fake link-up */
+		phydev->link = 0;
+		phydev->speed = SPEED_UNKNOWN;
+		phydev->duplex = DUPLEX_UNKNOWN;
 
-		/* Link stable long enough → accept */
-		link_valid = true;
+		return 0;
 	}
 
+	/* Valid link-up (plugged cable) */
 	return 0;
 }
+
 
 #if defined(CONFIG_CVITEK_PHY_UAPS)
 /* Ultra Auto Power Saving mode */
