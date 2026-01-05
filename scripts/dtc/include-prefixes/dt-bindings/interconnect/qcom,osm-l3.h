@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/interconnect/qcom,osm-l3.h

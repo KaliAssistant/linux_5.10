@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/pinctrl/mt6397-pinfunc.h

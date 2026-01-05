@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/bcm2835-aux.h

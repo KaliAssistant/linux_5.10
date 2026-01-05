@@ -1,0 +1,1 @@
+../../../../../../include/dt-bindings/firmware/imx/rsrc.h

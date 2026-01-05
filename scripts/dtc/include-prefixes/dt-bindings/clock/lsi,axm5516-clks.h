@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/lsi,axm5516-clks.h

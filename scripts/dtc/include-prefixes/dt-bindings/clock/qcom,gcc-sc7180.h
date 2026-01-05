@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/qcom,gcc-sc7180.h

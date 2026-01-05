@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/imx7-power.h

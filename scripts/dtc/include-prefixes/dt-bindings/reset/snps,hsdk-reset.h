@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/snps,hsdk-reset.h

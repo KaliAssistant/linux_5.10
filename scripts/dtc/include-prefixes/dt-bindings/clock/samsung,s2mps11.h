@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/samsung,s2mps11.h

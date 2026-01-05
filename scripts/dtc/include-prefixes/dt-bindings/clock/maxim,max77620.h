@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/maxim,max77620.h

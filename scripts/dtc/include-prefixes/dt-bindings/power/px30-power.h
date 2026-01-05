@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/px30-power.h

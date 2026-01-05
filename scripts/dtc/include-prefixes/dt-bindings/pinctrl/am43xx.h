@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/pinctrl/am43xx.h

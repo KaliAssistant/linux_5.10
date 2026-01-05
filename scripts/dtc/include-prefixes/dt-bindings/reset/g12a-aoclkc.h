@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/g12a-aoclkc.h

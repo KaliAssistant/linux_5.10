@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/stih415-resets.h

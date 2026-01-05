@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/sun50i-h6-r-ccu.h

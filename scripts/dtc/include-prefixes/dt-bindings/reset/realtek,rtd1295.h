@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/realtek,rtd1295.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/mt7629-resets.h

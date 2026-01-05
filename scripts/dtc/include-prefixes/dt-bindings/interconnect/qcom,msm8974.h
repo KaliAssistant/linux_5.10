@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/interconnect/qcom,msm8974.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/gpio/uniphier-gpio.h

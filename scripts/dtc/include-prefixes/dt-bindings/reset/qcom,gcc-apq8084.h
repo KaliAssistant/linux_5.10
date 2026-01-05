@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/qcom,gcc-apq8084.h

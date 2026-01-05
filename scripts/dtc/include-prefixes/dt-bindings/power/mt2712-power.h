@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/mt2712-power.h

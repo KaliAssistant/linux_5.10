@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/owl-s700-powergate.h

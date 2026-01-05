@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/arm/ux500_pm_domains.h

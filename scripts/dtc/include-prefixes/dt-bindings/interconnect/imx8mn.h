@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/interconnect/imx8mn.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/stm32mp1-resets.h

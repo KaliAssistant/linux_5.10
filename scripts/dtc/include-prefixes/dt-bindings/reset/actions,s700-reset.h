@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/actions,s700-reset.h

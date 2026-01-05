@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/summit,smb347-charger.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/mt7622-clk.h

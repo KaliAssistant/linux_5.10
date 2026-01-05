@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/stm32mp1-clks.h

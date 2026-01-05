@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/gpio/meson-a1-gpio.h

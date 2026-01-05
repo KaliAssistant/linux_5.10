@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/nuvoton,npcm7xx-reset.h

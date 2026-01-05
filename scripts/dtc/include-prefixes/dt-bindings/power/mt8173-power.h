@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/mt8173-power.h

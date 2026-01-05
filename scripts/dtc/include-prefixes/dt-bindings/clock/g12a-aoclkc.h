@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/g12a-aoclkc.h

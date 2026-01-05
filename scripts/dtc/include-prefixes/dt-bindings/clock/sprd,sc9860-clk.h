@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/sprd,sc9860-clk.h

@@ -1,0 +1,1 @@
+../../../../../../include/dt-bindings/iio/adc/ingenic,adc.h

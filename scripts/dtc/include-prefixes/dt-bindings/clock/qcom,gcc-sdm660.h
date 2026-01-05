@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/qcom,gcc-sdm660.h

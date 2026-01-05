@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/omap5.h

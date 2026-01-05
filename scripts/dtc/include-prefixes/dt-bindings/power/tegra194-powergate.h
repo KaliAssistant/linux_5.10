@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/tegra194-powergate.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/hip04-clock.h

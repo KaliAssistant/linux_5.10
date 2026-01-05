@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/regulator/mediatek,mt6397-regulator.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/interrupt-controller/aspeed-scu-ic.h

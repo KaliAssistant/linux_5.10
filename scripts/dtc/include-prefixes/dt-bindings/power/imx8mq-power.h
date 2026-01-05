@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/imx8mq-power.h

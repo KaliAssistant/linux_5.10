@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/bitmain,bm1880-reset.h

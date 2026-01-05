@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/marvell,mmp2.h

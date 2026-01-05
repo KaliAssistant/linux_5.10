@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/pinctrl/pads-imx8qxp.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/qcom-aoss-qmp.h

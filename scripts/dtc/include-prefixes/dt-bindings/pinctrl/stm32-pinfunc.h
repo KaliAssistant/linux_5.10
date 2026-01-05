@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/pinctrl/stm32-pinfunc.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/raspberrypi-power.h

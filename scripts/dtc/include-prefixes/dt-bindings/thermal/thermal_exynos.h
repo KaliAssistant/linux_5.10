@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/thermal/thermal_exynos.h

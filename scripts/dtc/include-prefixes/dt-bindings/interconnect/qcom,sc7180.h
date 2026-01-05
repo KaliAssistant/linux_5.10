@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/interconnect/qcom,sc7180.h

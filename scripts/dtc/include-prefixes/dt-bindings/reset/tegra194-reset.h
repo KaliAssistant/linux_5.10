@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/tegra194-reset.h

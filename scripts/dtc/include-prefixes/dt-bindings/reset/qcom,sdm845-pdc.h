@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/qcom,sdm845-pdc.h

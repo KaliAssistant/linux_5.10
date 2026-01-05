@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/qcom,lpasscorecc-sc7180.h

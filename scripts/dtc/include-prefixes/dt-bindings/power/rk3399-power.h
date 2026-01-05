@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/rk3399-power.h

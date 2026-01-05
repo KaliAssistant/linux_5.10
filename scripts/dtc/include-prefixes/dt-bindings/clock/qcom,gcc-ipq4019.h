@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/qcom,gcc-ipq4019.h

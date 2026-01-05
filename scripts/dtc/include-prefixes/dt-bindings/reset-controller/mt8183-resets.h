@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset-controller/mt8183-resets.h

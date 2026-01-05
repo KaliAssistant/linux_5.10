@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/regulator/active-semi,8945a-regulator.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/ti-syscon.h

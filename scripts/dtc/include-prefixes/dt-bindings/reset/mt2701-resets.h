@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/mt2701-resets.h

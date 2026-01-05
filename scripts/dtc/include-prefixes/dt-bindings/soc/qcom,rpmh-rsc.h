@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/soc/qcom,rpmh-rsc.h

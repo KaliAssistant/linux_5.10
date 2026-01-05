@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/qcom,mmcc-msm8960.h

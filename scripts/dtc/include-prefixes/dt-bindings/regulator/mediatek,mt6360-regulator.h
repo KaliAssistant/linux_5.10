@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/regulator/mediatek,mt6360-regulator.h

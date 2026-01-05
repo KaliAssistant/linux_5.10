@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/iio/qcom,spmi-adc7-pmk8350.h

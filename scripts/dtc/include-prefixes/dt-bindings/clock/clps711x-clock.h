@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/clps711x-clock.h

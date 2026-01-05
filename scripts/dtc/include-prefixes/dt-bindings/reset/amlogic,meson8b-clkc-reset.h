@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/amlogic,meson8b-clkc-reset.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/mt8135-resets.h

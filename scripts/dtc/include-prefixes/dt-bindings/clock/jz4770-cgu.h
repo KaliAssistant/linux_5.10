@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/jz4770-cgu.h

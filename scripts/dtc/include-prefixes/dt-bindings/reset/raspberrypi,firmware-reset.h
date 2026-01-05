@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/raspberrypi,firmware-reset.h

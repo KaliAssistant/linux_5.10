@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/pinctrl/sun4i-a10.h

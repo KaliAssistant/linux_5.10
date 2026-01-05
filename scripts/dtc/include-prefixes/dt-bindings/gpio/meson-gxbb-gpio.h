@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/gpio/meson-gxbb-gpio.h

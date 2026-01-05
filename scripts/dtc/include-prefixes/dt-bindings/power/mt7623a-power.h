@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/mt7623a-power.h

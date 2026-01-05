@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/pinctrl/qcom,pmic-mpp.h

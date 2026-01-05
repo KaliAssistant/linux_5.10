@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/am4.h

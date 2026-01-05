@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/intel,lgm-clk.h

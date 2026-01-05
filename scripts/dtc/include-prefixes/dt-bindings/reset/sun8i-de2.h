@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/sun8i-de2.h
