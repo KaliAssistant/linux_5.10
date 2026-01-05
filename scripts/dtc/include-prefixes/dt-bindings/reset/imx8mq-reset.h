@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/imx8mq-reset.h

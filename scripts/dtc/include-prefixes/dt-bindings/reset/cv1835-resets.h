@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/cv1835-resets.h

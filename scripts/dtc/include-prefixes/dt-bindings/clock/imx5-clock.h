@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/imx5-clock.h

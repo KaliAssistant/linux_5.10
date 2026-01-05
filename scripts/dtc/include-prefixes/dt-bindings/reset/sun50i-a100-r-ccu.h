@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/sun50i-a100-r-ccu.h

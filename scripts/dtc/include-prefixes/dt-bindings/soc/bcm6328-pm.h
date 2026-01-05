@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/soc/bcm6328-pm.h

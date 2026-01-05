@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/hisi,hi6220-resets.h

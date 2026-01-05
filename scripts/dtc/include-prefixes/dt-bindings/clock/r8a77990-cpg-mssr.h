@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/r8a77990-cpg-mssr.h

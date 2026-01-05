@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/owl-s900-powergate.h

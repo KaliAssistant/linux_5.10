@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/interconnect/qcom,sm8150.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/pinctrl/r7s72100-pinctrl.h

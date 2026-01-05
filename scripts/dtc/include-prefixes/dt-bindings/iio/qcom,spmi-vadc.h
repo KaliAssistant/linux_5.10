@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/iio/qcom,spmi-vadc.h

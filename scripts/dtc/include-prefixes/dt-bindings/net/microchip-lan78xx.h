@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/net/microchip-lan78xx.h

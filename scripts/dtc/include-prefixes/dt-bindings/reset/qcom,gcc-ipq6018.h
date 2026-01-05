@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/qcom,gcc-ipq6018.h

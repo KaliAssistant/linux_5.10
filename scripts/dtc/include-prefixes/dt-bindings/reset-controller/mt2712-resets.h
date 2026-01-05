@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset-controller/mt2712-resets.h

@@ -117,7 +117,7 @@ CONFIG_APF = n
 CONFIG_POWER_LIMIT = n
 
 #CONFIG FOR LOW POWER MODE
-CONFIG_SDIO_PWRCTRL ?= y
+CONFIG_SDIO_PWRCTRL ?= n
 CONFIG_GPIO_WAKEUP ?= n
 CONFIG_AUTO_POWERSAVE = n
 
@@ -150,7 +150,7 @@ CONFIG_RWNX_BCMC ?= y
 # Enable Monitor+Data interface support (need FW support)
 CONFIG_RWNX_MON_DATA = y
 CONFIG_RWNX_MON_XMIT = y
-CONFIG_RWNX_MON_RXFILTER = y
+CONFIG_RWNX_MON_RXFILTER = n # Dont enable this! or your capture tools cant capture EAPOL and WPA handshake
 
 
 # extra DEBUG config

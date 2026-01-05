@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/meson-gxbb-power.h

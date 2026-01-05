@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/thermal/tegra194-bpmp-thermal.h

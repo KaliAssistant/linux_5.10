@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/mt7622-reset.h

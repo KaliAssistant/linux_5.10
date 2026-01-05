@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/r8a779a0-sysc.h

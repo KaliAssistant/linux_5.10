@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/stratix10-clock.h

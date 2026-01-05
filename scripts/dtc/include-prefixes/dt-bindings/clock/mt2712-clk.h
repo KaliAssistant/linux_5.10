@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/mt2712-clk.h

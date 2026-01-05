@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/hi6220-clock.h

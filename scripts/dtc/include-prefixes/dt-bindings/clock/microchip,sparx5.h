@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/microchip,sparx5.h

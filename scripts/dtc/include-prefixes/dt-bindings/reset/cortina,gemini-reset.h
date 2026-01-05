@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/cortina,gemini-reset.h

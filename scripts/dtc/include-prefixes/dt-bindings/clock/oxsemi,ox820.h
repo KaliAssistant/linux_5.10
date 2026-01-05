@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/oxsemi,ox820.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/qcom,mmcc-msm8960.h

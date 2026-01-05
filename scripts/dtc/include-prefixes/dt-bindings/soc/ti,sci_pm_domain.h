@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/soc/ti,sci_pm_domain.h

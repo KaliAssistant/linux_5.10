@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/nuvoton,npcm7xx-clock.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/hix5hd2-clock.h

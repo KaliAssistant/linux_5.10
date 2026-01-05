@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/regulator/qcom,rpmh-regulator.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/sun4i-a10-ccu.h

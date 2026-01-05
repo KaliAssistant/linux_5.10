@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/ingenic,sysost.h

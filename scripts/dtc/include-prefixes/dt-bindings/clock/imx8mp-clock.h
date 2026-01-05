@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/imx8mp-clock.h

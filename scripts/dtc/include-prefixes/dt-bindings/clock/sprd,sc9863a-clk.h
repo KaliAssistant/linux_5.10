@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/sprd,sc9863a-clk.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/iio/qcom,spmi-adc7-pmr735b.h

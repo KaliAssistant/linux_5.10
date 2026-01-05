@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/mt7622-power.h

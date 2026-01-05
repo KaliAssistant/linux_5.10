@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/rk3036-power.h

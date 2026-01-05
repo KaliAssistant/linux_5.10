@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/s3c2412.h

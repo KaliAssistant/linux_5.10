@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/meson-sm1-power.h

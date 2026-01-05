@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/thermal/tegra124-soctherm.h

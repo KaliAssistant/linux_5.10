@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/mpc512x-clock.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/meson-g12a-power.h

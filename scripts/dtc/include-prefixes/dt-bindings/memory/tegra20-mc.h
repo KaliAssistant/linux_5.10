@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/memory/tegra20-mc.h

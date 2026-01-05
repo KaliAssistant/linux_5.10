@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/sound/sc7180-lpass.h

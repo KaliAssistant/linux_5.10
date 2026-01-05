@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/gce/mt8173-gce.h

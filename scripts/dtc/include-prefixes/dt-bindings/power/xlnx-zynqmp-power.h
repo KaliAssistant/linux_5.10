@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/xlnx-zynqmp-power.h

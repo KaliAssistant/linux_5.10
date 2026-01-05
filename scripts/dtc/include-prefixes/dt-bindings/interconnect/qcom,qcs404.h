@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/interconnect/qcom,qcs404.h

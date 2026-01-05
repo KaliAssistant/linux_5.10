@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/owl-s500-powergate.h

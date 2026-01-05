@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/power/mt6765-power.h

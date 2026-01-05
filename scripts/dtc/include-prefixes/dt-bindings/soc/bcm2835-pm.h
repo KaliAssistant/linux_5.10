@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/soc/bcm2835-pm.h

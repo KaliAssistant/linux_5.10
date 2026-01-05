@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/amlogic,meson-a1-reset.h

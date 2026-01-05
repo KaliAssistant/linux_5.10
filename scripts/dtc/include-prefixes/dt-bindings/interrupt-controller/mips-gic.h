@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/interrupt-controller/mips-gic.h

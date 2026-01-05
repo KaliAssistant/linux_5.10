@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/regulator/maxim,max77802.h

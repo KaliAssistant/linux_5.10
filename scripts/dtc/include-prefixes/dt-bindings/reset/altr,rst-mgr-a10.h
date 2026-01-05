@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/altr,rst-mgr-a10.h

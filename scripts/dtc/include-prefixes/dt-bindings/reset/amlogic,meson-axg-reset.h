@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/amlogic,meson-axg-reset.h

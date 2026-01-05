@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/amlogic,meson-gxbb-reset.h

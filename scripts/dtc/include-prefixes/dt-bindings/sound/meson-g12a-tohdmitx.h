@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/sound/meson-g12a-tohdmitx.h

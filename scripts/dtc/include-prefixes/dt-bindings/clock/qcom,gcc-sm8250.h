@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/qcom,gcc-sm8250.h

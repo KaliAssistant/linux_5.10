@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/berlin2.h

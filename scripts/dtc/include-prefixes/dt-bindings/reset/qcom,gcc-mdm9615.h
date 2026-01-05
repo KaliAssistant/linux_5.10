@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/qcom,gcc-mdm9615.h

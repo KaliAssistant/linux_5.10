@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/interconnect/qcom,sdm845.h

@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/qcom,gcc-msm8660.h

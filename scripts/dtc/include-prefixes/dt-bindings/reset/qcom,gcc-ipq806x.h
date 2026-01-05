@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/reset/qcom,gcc-ipq806x.h

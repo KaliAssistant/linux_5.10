@@ -1,0 +1,1 @@
+../../../../../include/dt-bindings/clock/marvell,mmp2.h
