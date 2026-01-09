@@ -18,6 +18,7 @@ void arch_sync_dma_for_device(phys_addr_t paddr, size_t size,
 {
 	__dma_map_area(phys_to_virt(paddr), size, dir);
 }
+EXPORT_SYMBOL_GPL(arch_sync_dma_for_device);
 
 void arch_sync_dma_for_cpu(phys_addr_t paddr, size_t size,
 		enum dma_data_direction dir)
@@ -57,3 +58,4 @@ void arch_setup_dma_ops(struct device *dev, u64 dma_base, u64 size,
 		dev->dma_ops = &xen_swiotlb_dma_ops;
 #endif
 }
+EXPORT_SYMBOL(arch_setup_dma_ops);

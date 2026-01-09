@@ -10,6 +10,31 @@
 
 #include <asm/pgtable.h>		/* for TASK_SIZE */
 
+#ifdef CONFIG_SET_FS
+/*
+ * The fs value determines whether argument validity checking should be
+ * performed or not.  If get_fs() == USER_DS, checking is performed, with
+ * get_fs() == KERNEL_DS, checking is bypassed.
+ *
+ * For historical reasons, these macros are grossly misnamed.
+ */
+#define KERNEL_DS      (~0UL)
+#define USER_DS                (TASK_SIZE)
+
+#define get_ds()       (KERNEL_DS)
+#define get_fs()       (current_thread_info()->addr_limit)
+
+static inline void set_fs(mm_segment_t fs)
+{
+	current_thread_info()->addr_limit = fs;
+}
+
+#define segment_eq(a, b) ((a) == (b))
+
+#define user_addr_max()        (get_fs())
+#define uaccess_kernel() segment_eq(get_fs(), KERNEL_DS)
+#endif /* CONFIG_SET_FS */
+
 /*
  * User space memory access functions
  */
@@ -316,12 +341,13 @@ do {								\
 #define __put_user(x, ptr)					\
 ({								\
 	__typeof__(*(ptr)) __user *__gu_ptr = (ptr);		\
+	__typeof__(*__gu_ptr) __val = (x);			\
 	long __pu_err = 0;					\
 								\
 	__chk_user_ptr(__gu_ptr);				\
 								\
 	__enable_user_access();					\
-	__put_user_nocheck(x, __gu_ptr, __pu_err);		\
+	__put_user_nocheck(__val, __gu_ptr, __pu_err);		\
 	__disable_user_access();				\
 								\
 	__pu_err;						\

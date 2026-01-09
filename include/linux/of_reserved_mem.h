@@ -9,7 +9,7 @@ struct of_phandle_args;
 struct reserved_mem_ops;
 
 struct reserved_mem {
-	const char			*name;
+	char				name[16];
 	unsigned long			fdt_node;
 	unsigned long			phandle;
 	const struct reserved_mem_ops	*ops;

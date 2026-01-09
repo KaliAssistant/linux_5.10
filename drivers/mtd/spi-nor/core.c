@@ -750,6 +750,42 @@ static int spi_nor_write_sr(struct spi_nor *nor, const u8 *sr, size_t len)
 }
 
 /**
+ * spi_nor_write_sr2_jy() - Write the Status Register.
+ * @nor:	pointer to 'struct spi_nor'.
+ * @sr:		pointer to DMA-able buffer to write to the Status Register.
+ * @len:	number of bytes to write to the Status Register.
+ *
+ * Return: 0 on success, -errno otherwise.
+ */
+static int spi_nor_write_sr2_jy(struct spi_nor *nor, const u8 *sr, size_t len)
+{
+	int ret;
+
+	ret = spi_nor_write_enable(nor);
+	if (ret)
+		return ret;
+
+	if (nor->spimem) {
+		struct spi_mem_op op =
+			SPI_MEM_OP(SPI_MEM_OP_CMD(SPINOR_OP_WRSR2_JY, 1),
+				   SPI_MEM_OP_NO_ADDR,
+				   SPI_MEM_OP_NO_DUMMY,
+				   SPI_MEM_OP_DATA_OUT(len, sr, 1));
+
+		ret = spi_mem_exec_op(nor->spimem, &op);
+	} else {
+		ret = nor->controller_ops->write_reg(nor, SPINOR_OP_WRSR2_JY,
+						     sr, len);
+	}
+
+	if (ret) {
+		dev_dbg(nor->dev, "error %d writing SR\n", ret);
+		return ret;
+	}
+
+	return spi_nor_wait_till_ready(nor);
+}
+/**
  * spi_nor_write_sr1_and_check() - Write one byte to the Status Register 1 and
  * ensure that the byte written match the received value.
  * @nor:	pointer to a 'struct spi_nor'.
@@ -906,7 +942,7 @@ static int spi_nor_write_16bit_cr_and_check(struct spi_nor *nor, u8 cr)
  *
  * Return: 0 on success, -errno otherwise.
  */
-static int spi_nor_write_sr_and_check(struct spi_nor *nor, u8 sr1)
+int spi_nor_write_sr_and_check(struct spi_nor *nor, u8 sr1)
 {
 	if (nor->flags & SNOR_F_HAS_16BIT_SR)
 		return spi_nor_write_16bit_sr_and_check(nor, sr1);
@@ -1536,6 +1572,59 @@ erase_err:
 	return ret;
 }
 
+static int spi_nor_get_otp_info(struct mtd_info *mtd, struct otp_message *otp_info)
+{
+	struct spi_nor *nor = mtd_to_spi_nor(mtd);
+	const struct flash_info	*info = nor->info;
+
+	if (nor->flags & SNOR_F_SUPPORT_OTP) {
+		otp_info->count	= info->otp_num;
+		otp_info->length = info->otp_size;
+	}
+	/* we do not lock otp area */
+	otp_info->locked	= 0;
+	return 0;
+}
+
+static int spi_nor_erase_otp(struct mtd_info *mtd, struct erase_info *instr)
+{
+	int ret = 0;
+	u32 addr = instr->addr;
+	struct spi_nor *nor = mtd_to_spi_nor(mtd);
+	u8 addr_width = nor->addr_width;
+	u8 opcode = nor->erase_opcode;
+
+	if (!(nor->flags & SNOR_F_SUPPORT_OTP))
+		return 0;
+
+	mutex_lock(&nor->lock);
+	ret = spi_nor_write_enable(nor);
+	if (ret)
+		goto erase_err;
+
+	nor->erase_opcode = SPINOR_OP_ER_OTP;
+	nor->addr_width = 3;
+	if (!((addr >> 12) & 0x3)) {
+		pr_info("otp area address is not correct!\n");
+		ret = -1;
+		goto erase_err;
+	}
+
+	ret = spi_nor_erase_sector(nor, addr);
+	if (ret)
+		goto erase_err;
+
+	ret = spi_nor_wait_till_ready(nor);
+	if (ret)
+		goto erase_err;
+
+erase_err:
+	nor->erase_opcode = opcode;
+	nor->addr_width = addr_width;
+	mutex_unlock(&nor->lock);
+	return ret;
+}
+
 static u8 spi_nor_get_sr_bp_mask(struct spi_nor *nor)
 {
 	u8 mask = SR_BP2 | SR_BP1 | SR_BP0;
@@ -1959,6 +2048,40 @@ int spi_nor_sr2_bit1_quad_enable(struct spi_nor *nor)
 	return spi_nor_write_16bit_cr_and_check(nor, nor->bouncebuf[0]);
 }
 
+int spi_nor_sr_bit1_quad_enable(struct spi_nor *nor)
+{
+	int ret;
+	u8 sr2;
+	u8 sr2_written;
+
+	ret = spi_nor_read_cr(nor, &sr2);
+	if (ret)
+		return ret;
+
+	if (sr2 & SR2_QUAD_EN_BIT1)
+		return 0;
+
+	sr2 |= SR2_QUAD_EN_BIT1;
+
+	ret = spi_nor_write_sr2_jy(nor, &sr2, 1);
+	if (ret)
+		return ret;
+
+	sr2_written = sr2;
+
+	/* Read back and check it. */
+	ret = spi_nor_read_cr(nor, &sr2);
+	if (ret)
+		return ret;
+
+	if (sr2 != sr2_written) {
+		dev_dbg(nor->dev, "SR2: Read back test failed\n");
+		return -EIO;
+	}
+
+	return 0;
+}
+
 /**
  * spi_nor_sr2_bit7_quad_enable() - set QE bit in Status Register 2.
  * @nor:	pointer to a 'struct spi_nor'
@@ -2007,6 +2130,8 @@ int spi_nor_sr2_bit7_quad_enable(struct spi_nor *nor)
 }
 
 static const struct spi_nor_manufacturer *manufacturers[] = {
+	&spi_nor_cvitek,
+/*
 	&spi_nor_atmel,
 	&spi_nor_catalyst,
 	&spi_nor_eon,
@@ -2024,6 +2149,7 @@ static const struct spi_nor_manufacturer *manufacturers[] = {
 	&spi_nor_winbond,
 	&spi_nor_xilinx,
 	&spi_nor_xmc,
+*/
 };
 
 static const struct flash_info *
@@ -2119,6 +2245,23 @@ read_err:
 	return ret;
 }
 
+static int spi_nor_read_otp(struct mtd_info *mtd, loff_t from, size_t len, u_char *buf)
+{
+	struct spi_nor *nor = mtd_to_spi_nor(mtd);
+	ssize_t ret = 0;
+
+	if (!(nor->flags & SNOR_F_SUPPORT_OTP))
+		return 0;
+
+	mutex_lock(&nor->lock);
+	ret = nor->controller_ops->read_otp(nor, from, len, buf);
+	if (ret != len)
+		ret = -1;
+
+	mutex_unlock(&nor->lock);
+	return ret;
+}
+
 /*
  * Write an address range to the nor chip.  Data must be written in
  * FLASH_PAGESIZE chunks.  The address range may be any size provided
@@ -2180,6 +2323,62 @@ static int spi_nor_write(struct mtd_info *mtd, loff_t to, size_t len,
 
 write_err:
 	spi_nor_unlock_and_unprep(nor);
+	return ret;
+}
+
+static int spi_nor_write_otp(struct mtd_info *mtd, loff_t to, size_t len, const u_char *buf)
+{
+	struct spi_nor *nor = mtd_to_spi_nor(mtd);
+	size_t page_offset, page_remain, i;
+	ssize_t ret;
+
+	dev_dbg(nor->dev, "to 0x%08x, len %zd\n", (u32)to, len);
+	if (!(nor->flags & SNOR_F_SUPPORT_OTP))
+		return 0;
+
+	mutex_lock(&nor->lock);
+
+	for (i = 0; i < len; ) {
+		ssize_t written;
+		loff_t addr = to + i;
+
+		/*
+		 * If page_size is a power of two, the offset can be quickly
+		 * calculated with an AND operation. On the other cases we
+		 * need to do a modulus operation (more expensive).
+		 * Power of two numbers have only one bit set and we can use
+		 * the instruction hweight32 to detect if we need to do a
+		 * modulus (do_div()) or not.
+		 */
+
+		if (hweight32(nor->page_size) == 1) {
+			page_offset = addr & (nor->page_size - 1);
+		} else {
+			u64 aux = addr;
+
+			page_offset = do_div(aux, nor->page_size);
+		}
+		/* the size of data remaining on the first page */
+		page_remain = min_t(size_t,
+				    nor->page_size - page_offset, len - i);
+
+		ret = spi_nor_write_enable(nor);
+		if (ret)
+			goto write_err;
+
+		ret = nor->controller_ops->write_otp(nor, addr, page_remain, buf + i);
+		if (ret < 0)
+			goto write_err;
+		written = ret;
+
+		ret = spi_nor_wait_till_ready(nor);
+		if (ret)
+			goto write_err;
+		i += written;
+	}
+
+write_err:
+	mutex_unlock(&nor->lock);
 	return ret;
 }
 
@@ -2755,15 +2954,28 @@ static void spi_nor_info_init_params(struct spi_nor *nor)
 	if (info->flags & SPI_NOR_DUAL_READ) {
 		params->hwcaps.mask |= SNOR_HWCAPS_READ_1_1_2;
 		spi_nor_set_read_settings(&params->reads[SNOR_CMD_READ_1_1_2],
-					  0, 8, SPINOR_OP_READ_1_1_2,
-					  SNOR_PROTO_1_1_2);
+				0, 8, SPINOR_OP_READ_1_1_2,
+				SNOR_PROTO_1_1_2);
 	}
 
 	if (info->flags & SPI_NOR_QUAD_READ) {
 		params->hwcaps.mask |= SNOR_HWCAPS_READ_1_1_4;
 		spi_nor_set_read_settings(&params->reads[SNOR_CMD_READ_1_1_4],
-					  0, 8, SPINOR_OP_READ_1_1_4,
-					  SNOR_PROTO_1_1_4);
+				0, 8, SPINOR_OP_READ_1_1_4,
+				SNOR_PROTO_1_1_4);
+
+		params->hwcaps.mask |= SNOR_HWCAPS_READ_1_4_4;
+		spi_nor_set_read_settings(&params->reads[SNOR_CMD_READ_1_4_4],
+				0, 6, SPINOR_OP_READ_1_4_4,
+				SNOR_PROTO_1_4_4);
+
+	}
+
+	if (info->flags & SPI_NOR_HAS_FIX_DUMMY) {
+		spi_nor_set_read_settings(&params->reads[SNOR_CMD_READ_1_4_4],
+				0, 10, SPINOR_OP_READ_1_4_4,
+				SNOR_PROTO_1_4_4);
+
 	}
 
 	if (info->flags & SPI_NOR_OCTAL_READ) {
@@ -2776,7 +2988,13 @@ static void spi_nor_info_init_params(struct spi_nor *nor)
 	/* Page Program settings. */
 	params->hwcaps.mask |= SNOR_HWCAPS_PP;
 	spi_nor_set_pp_settings(&params->page_programs[SNOR_CMD_PP],
-				SPINOR_OP_PP, SNOR_PROTO_1_1_1);
+			SPINOR_OP_PP, SNOR_PROTO_1_1_1);
+
+	if (info->flags & SPI_NOR_QUAD_WRITE) {
+		params->hwcaps.mask |= SNOR_HWCAPS_PP_1_1_4;
+		spi_nor_set_pp_settings(&params->page_programs[SNOR_CMD_PP_1_1_4],
+				SPINOR_OP_PP_1_1_4, SNOR_PROTO_1_1_4);
+	}
 
 	/*
 	 * Sector Erase settings. Sort Erase Types in ascending order, with the
@@ -2915,20 +3133,27 @@ static int spi_nor_quad_enable(struct spi_nor *nor)
 }
 
 /**
- * spi_nor_unlock_all() - Unlocks the entire flash memory array.
+ * spi_nor_try_unlock_all() - Tries to unlock the entire flash memory array.
  * @nor:	pointer to a 'struct spi_nor'.
  *
  * Some SPI NOR flashes are write protected by default after a power-on reset
  * cycle, in order to avoid inadvertent writes during power-up. Backward
  * compatibility imposes to unlock the entire flash memory array at power-up
  * by default.
+ *
+ * Unprotecting the entire flash array will fail for boards which are hardware
+ * write-protected. Thus any errors are ignored.
  */
-static int spi_nor_unlock_all(struct spi_nor *nor)
+static void spi_nor_try_unlock_all(struct spi_nor *nor)
 {
-	if (nor->flags & SNOR_F_HAS_LOCK)
-		return spi_nor_unlock(&nor->mtd, 0, nor->params->size);
+	int ret;
 
-	return 0;
+	if (!(nor->flags & SNOR_F_HAS_LOCK))
+		return;
+
+	ret = spi_nor_unlock(&nor->mtd, 0, nor->params->size);
+	if (ret)
+		dev_dbg(nor->dev, "Failed to unlock the entire flash memory array\n");
 }
 
 static int spi_nor_init(struct spi_nor *nor)
@@ -2941,11 +3166,7 @@ static int spi_nor_init(struct spi_nor *nor)
 		return err;
 	}
 
-	err = spi_nor_unlock_all(nor);
-	if (err) {
-		dev_dbg(nor->dev, "Failed to unlock the entire flash memory array\n");
-		return err;
-	}
+	spi_nor_try_unlock_all(nor);
 
 	if (nor->addr_width == 4 && !(nor->flags & SNOR_F_4B_OPCODES)) {
 		/*
@@ -3135,6 +3356,9 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	if (info->flags & SPI_NOR_HAS_LOCK)
 		nor->flags |= SNOR_F_HAS_LOCK;
 
+	if (info->flags & SPI_NOR_SUPPORT_OTP)
+		nor->flags |= SNOR_F_SUPPORT_OTP;
+
 	mtd->_write = spi_nor_write;
 
 	/* Init flash parameters based on flash_info struct and SFDP */
@@ -3152,6 +3376,10 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	mtd->_erase = spi_nor_erase;
 	mtd->_read = spi_nor_read;
 	mtd->_resume = spi_nor_resume;
+	mtd->_erase_otp = spi_nor_erase_otp;
+	mtd->_read_otp = spi_nor_read_otp;
+	mtd->_write_otp = spi_nor_write_otp;
+	mtd->_get_otp_info = spi_nor_get_otp_info;
 
 	if (nor->params->locking_ops) {
 		mtd->_lock = spi_nor_lock;
@@ -3213,7 +3441,7 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	dev_info(dev, "%s (%lld Kbytes)\n", info->name,
 			(long long)mtd->size >> 10);
 
-	dev_dbg(dev,
+	dev_info(dev,
 		"mtd .name = %s, .size = 0x%llx (%lldMiB), "
 		".erasesize = 0x%.8x (%uKiB) .numeraseregions = %d\n",
 		mtd->name, (long long)mtd->size, (long long)(mtd->size >> 20),

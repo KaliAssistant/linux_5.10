@@ -4,7 +4,6 @@
  *
  * Copyright (C) 2011 Google, Inc.
  */
-
 #include <linux/err.h>
 #include <linux/freezer.h>
 #include <linux/kthread.h>
@@ -14,14 +13,18 @@
 #include <uapi/linux/sched/types.h>
 #include <linux/scatterlist.h>
 #include <linux/vmalloc.h>
-
 #include "ion.h"
+#include <linux/io.h>
 
 void *ion_heap_map_kernel(struct ion_heap *heap,
 			  struct ion_buffer *buffer)
 {
-	struct sg_page_iter piter;
 	void *vaddr;
+
+#if defined(CONFIG_ARM) || defined(__arm__) || defined(__aarch64__)
+	pr_debug("%s addr=0x%llx, size=%lu\n", __func__, buffer->paddr, PAGE_ALIGN(buffer->size));
+
+	struct sg_page_iter piter;
 	pgprot_t pgprot;
 	struct sg_table *table = buffer->sg_table;
 	int npages = PAGE_ALIGN(buffer->size) / PAGE_SIZE;
@@ -38,7 +41,7 @@ void *ion_heap_map_kernel(struct ion_heap *heap,
 		pgprot = pgprot_writecombine(PAGE_KERNEL);
 
 	for_each_sgtable_page(table, &piter, 0) {
-		BUG_ON(tmp - pages >= npages);
+		WARN_ON(tmp - pages >= npages);
 		*tmp++ = sg_page_iter_page(&piter);
 	}
 
@@ -48,13 +51,36 @@ void *ion_heap_map_kernel(struct ion_heap *heap,
 	if (!vaddr)
 		return ERR_PTR(-ENOMEM);
 
+#else
+
+	pr_debug("%s addr=0x%llx, size=%lu\n", __func__, buffer->paddr, PAGE_ALIGN(buffer->size));
+
+	if (buffer->flags & ION_FLAG_CACHED)
+		vaddr = memremap(buffer->paddr, PAGE_ALIGN(buffer->size), MEMREMAP_WB);
+	else
+		vaddr = ioremap(buffer->paddr, PAGE_ALIGN(buffer->size));
+
+	if (!vaddr) {
+		pr_err("%s map failed\n", __func__);
+		return ERR_PTR(-ENOMEM);
+	}
+
+#endif
 	return vaddr;
 }
 
 void ion_heap_unmap_kernel(struct ion_heap *heap,
 			   struct ion_buffer *buffer)
 {
+#if defined(CONFIG_ARM) || defined(__arm__) || defined(__aarch64__)
 	vunmap(buffer->vaddr);
+#else
+	if (buffer->flags & ION_FLAG_CACHED)
+		memunmap(buffer->vaddr);
+	else
+		iounmap(buffer->vaddr);
+
+#endif
 }
 
 int ion_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
@@ -125,6 +151,21 @@ int ion_heap_buffer_zero(struct ion_buffer *buffer)
 		pgprot = pgprot_writecombine(PAGE_KERNEL);
 
 	return ion_heap_sglist_zero(table, pgprot);
+}
+
+int ion_heap_pages_zero(struct page *page, size_t size, pgprot_t pgprot)
+{
+	struct scatterlist sg;
+	struct sg_table sgt;
+
+	sg_init_table(&sg, 1);
+	sg_set_page(&sg, page, size, 0);
+
+	sgt.sgl = &sg;
+	sgt.nents = 1;
+	sgt.orig_nents = 1;
+
+	return ion_heap_sglist_zero(&sgt, pgprot);
 }
 
 void ion_heap_freelist_add(struct ion_heap *heap, struct ion_buffer *buffer)

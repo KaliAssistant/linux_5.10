@@ -51,3 +51,7 @@ obj-$(CONFIG_CRYPTO_DEV_ARTPEC6) += axis/
 obj-$(CONFIG_CRYPTO_DEV_ZYNQMP_AES) += xilinx/
 obj-y += hisilicon/
 obj-$(CONFIG_CRYPTO_DEV_AMLOGIC_GXL) += amlogic/
+obj-$(CONFIG_CRYPTO_DEV_CVITEK_SPACC) += cvitek-spacc.o
+
+userprogs-always-y += spacc_test
+spacc_test-userccflags += -Iusr/include -I$(srctree)/include/uapi -static

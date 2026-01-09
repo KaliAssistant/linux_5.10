@@ -4002,12 +4002,12 @@ static int stmmac_change_mtu(struct net_device *dev, int new_mtu)
 
 	txfifosz /= priv->plat->tx_queues_to_use;
 
-	if (netif_running(dev)) {
-		netdev_err(priv->dev, "must be stopped to change its MTU\n");
-		return -EBUSY;
-	}
+	//if (netif_running(dev)) {
+	//	netdev_err(priv->dev, "must be stopped to change its MTU\n");
+	//	return -EBUSY;
+	//}
 
-	new_mtu = STMMAC_ALIGN(new_mtu);
+	//new_mtu = STMMAC_ALIGN(new_mtu);
 
 	/* If condition true, FIFO is too small or MTU too large */
 	if ((txfifosz < new_mtu) || (new_mtu > BUF_SIZE_16KiB))
@@ -4627,6 +4627,22 @@ static const struct net_device_ops stmmac_netdev_ops = {
 	.ndo_vlan_rx_kill_vid = stmmac_vlan_rx_kill_vid,
 };
 
+void stmmac_reset_subtask2(struct stmmac_priv *priv)
+{
+	rtnl_lock();
+	netif_trans_update(priv->dev);
+	while (test_and_set_bit(STMMAC_RESETTING, &priv->state))
+		usleep_range(1000, 2000);
+
+	set_bit(STMMAC_DOWN, &priv->state);
+	dev_close(priv->dev);
+	dev_open(priv->dev, NULL);
+	clear_bit(STMMAC_DOWN, &priv->state);
+	clear_bit(STMMAC_RESETTING, &priv->state);
+	rtnl_unlock();
+}
+EXPORT_SYMBOL_GPL(stmmac_reset_subtask2);
+
 static void stmmac_reset_subtask(struct stmmac_priv *priv)
 {
 	if (!test_and_clear_bit(STMMAC_RESET_REQUESTED, &priv->state))
@@ -4638,14 +4654,14 @@ static void stmmac_reset_subtask(struct stmmac_priv *priv)
 
 	rtnl_lock();
 	netif_trans_update(priv->dev);
-	while (test_and_set_bit(STMMAC_RESETING, &priv->state))
+	while (test_and_set_bit(STMMAC_RESETTING, &priv->state))
 		usleep_range(1000, 2000);
 
 	set_bit(STMMAC_DOWN, &priv->state);
 	dev_close(priv->dev);
 	dev_open(priv->dev, NULL);
 	clear_bit(STMMAC_DOWN, &priv->state);
-	clear_bit(STMMAC_RESETING, &priv->state);
+	clear_bit(STMMAC_RESETTING, &priv->state);
 	rtnl_unlock();
 }
 
@@ -5305,6 +5321,8 @@ int stmmac_resume(struct device *dev)
 	phylink_mac_change(priv->phylink, true);
 
 	netif_device_attach(ndev);
+	if (ndev->phydev)
+		phy_start(ndev->phydev);
 
 	return 0;
 }

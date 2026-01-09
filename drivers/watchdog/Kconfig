@@ -160,6 +160,14 @@ config SOFT_WATCHDOG_PRETIMEOUT
 	  watchdog. Be aware that governors might affect the watchdog because it
 	  is purely software, e.g. the panic governor will stall it!
 
+config CVITEK_WATCHDOG
+	tristate "Cvitek Watchdog support"
+	depends on ARCH_CVITEK
+	select WATCHDOG_CORE
+	help
+		Watchdog for SG200x devices
+	
+
 config BD70528_WATCHDOG
 	tristate "ROHM BD70528 PMIC Watchdog"
 	depends on MFD_ROHM_BD70528
@@ -386,6 +394,7 @@ config ARM_SBSA_WATCHDOG
 config ARMADA_37XX_WATCHDOG
 	tristate "Armada 37xx watchdog"
 	depends on ARCH_MVEBU || COMPILE_TEST
+	depends on HAS_IOMEM
 	select MFD_SYSCON
 	select WATCHDOG_CORE
 	help
@@ -631,7 +640,7 @@ config SUNXI_WATCHDOG
 
 config COH901327_WATCHDOG
 	bool "ST-Ericsson COH 901 327 watchdog"
-	depends on ARCH_U300 || (ARM && COMPILE_TEST)
+	depends on ARCH_U300 || (ARM && COMMON_CLK && COMPILE_TEST)
 	default y if MACH_U300
 	select WATCHDOG_CORE
 	help
@@ -723,6 +732,20 @@ config IMX2_WDT
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx2_wdt.
 
+config ICE_WDT
+	tristate "ICE+ Watchdog"
+	depends on RISCV
+	default y
+	select WATCHDOG_CORE
+	help
+	  This is the driver for the hardware watchdog
+	  on the ice and later processors.
+	  If you have one of these processors and wish to have
+	  watchdog support enabled, say Y, otherwise say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called ice_wdt.
+
 config IMX_SC_WDT
 	tristate "IMX SC Watchdog"
 	depends on HAVE_ARM_SMCCC
@@ -789,6 +812,7 @@ config MOXART_WDT
 
 config SIRFSOC_WATCHDOG
 	tristate "SiRFSOC watchdog"
+	depends on HAS_IOMEM
 	depends on ARCH_SIRF || COMPILE_TEST
 	select WATCHDOG_CORE
 	default y

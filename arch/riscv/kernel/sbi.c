@@ -547,6 +547,53 @@ static inline long sbi_get_firmware_version(void)
 	return __sbi_base_ecall(SBI_EXT_BASE_GET_IMP_VERSION);
 }
 
+long sbi_get_mvendorid(void)
+{
+	return __sbi_base_ecall(SBI_EXT_BASE_GET_MVENDORID);
+}
+
+long sbi_get_marchid(void)
+{
+	return __sbi_base_ecall(SBI_EXT_BASE_GET_MARCHID);
+}
+
+long sbi_get_mimpid(void)
+{
+	return __sbi_base_ecall(SBI_EXT_BASE_GET_MIMPID);
+}
+
+long sbi_rst_c906l(void)
+{
+	return __sbi_base_ecall(SBI_EXT_BASE_RST_C906L);
+}
+EXPORT_SYMBOL(sbi_rst_c906l);
+
+long sbi_unrst_c906l(const unsigned long address)
+{
+	struct sbiret ret;
+
+	ret = sbi_ecall(SBI_EXT_BASE, SBI_EXT_BASE_UNRST_C906L
+			, address, 0, 0, 0, 0, 0);
+	if (ret.error)
+		return ret.error;
+
+	return 0;
+}
+EXPORT_SYMBOL(sbi_unrst_c906l);
+
+long sbi_reset_c906l(const unsigned long address)
+{
+	struct sbiret ret;
+
+	ret = sbi_ecall(SBI_EXT_BASE, SBI_EXT_BASE_RESET_C906L
+			, address, 0, 0, 0, 0, 0);
+	if (ret.error)
+		return ret.error;
+
+	return 0;
+}
+EXPORT_SYMBOL(sbi_reset_c906l);
+
 static void sbi_send_cpumask_ipi(const struct cpumask *target)
 {
 	struct cpumask hartid_mask;

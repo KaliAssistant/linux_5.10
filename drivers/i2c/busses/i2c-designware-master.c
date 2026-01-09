@@ -205,6 +205,8 @@ static int i2c_dw_init_master(struct dw_i2c_dev *dev)
 	}
 
 	/* Write SDA hold time if supported */
+	dev->sda_hold_time = 0x1E;
+
 	if (dev->sda_hold_time)
 		regmap_write(dev->map, DW_IC_SDA_HOLD, dev->sda_hold_time);
 
@@ -330,9 +332,12 @@ i2c_dw_xfer_msg(struct dw_i2c_dev *dev)
 			 * be adjusted when receiving the first byte.
 			 * Thus we can't stop the transaction here.
 			 */
-			if (dev->msg_write_idx == dev->msgs_num - 1 &&
-			    buf_len == 1 && !(flags & I2C_M_RECV_LEN))
+			if (((dev->msg_write_idx == dev->msgs_num - 1) || (flags & I2C_M_WRSTOP)) &&
+			    buf_len == 1 && !(flags & I2C_M_RECV_LEN)) {
 				cmd |= BIT(9);
+				if (flags & I2C_M_WRSTOP)
+					dev->use_interstop = 1;
+			}
 
 			if (need_restart) {
 				cmd |= BIT(10);
@@ -507,7 +512,10 @@ i2c_dw_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	 * additional interrupts are a hardware bug or this driver doesn't
 	 * handle them correctly yet.
 	 */
-	__i2c_dw_disable_nowait(dev);
+	if (!dev->use_interstop)
+		__i2c_dw_disable_nowait(dev);
+
+	dev->use_interstop = 0;
 
 	if (dev->msg_err) {
 		ret = dev->msg_err;
@@ -691,23 +699,96 @@ void i2c_dw_configure_master(struct dw_i2c_dev *dev)
 	}
 }
 EXPORT_SYMBOL_GPL(i2c_dw_configure_master);
+static inline void mmio_write_32(uintptr_t addr,
+				      uint32_t val)
+{
+	void __iomem *tpreg;
+
+	tpreg = ioremap(addr, 0x4);
+	if (IS_ERR(tpreg)) {
+		pr_err("ioremap %p failed\n", (void *)addr);
+		return;
+	}
+
+	iowrite32(val, tpreg);
+
+	iounmap(tpreg);
+}
+
+static void cvitek_pinmux_to_gpio(struct i2c_pinmux_info *pinfo)
+{
+	mmio_write_32((uintptr_t)pinfo->scl_fmux_addr, pinfo->scl_gpio_func_sel);
+	mmio_write_32((uintptr_t)pinfo->sda_fmux_addr, pinfo->sda_gpio_func_sel);
+}
+
+static void cvitek_pinmux_to_iic(struct i2c_pinmux_info *pinfo)
+{
+	mmio_write_32((uintptr_t)pinfo->scl_fmux_addr, pinfo->scl_iic_func_sel);
+	mmio_write_32((uintptr_t)pinfo->sda_fmux_addr, pinfo->sda_iic_func_sel);
+}
+
+static int i2c_dw_init_pinmux_info(struct dw_i2c_dev *dev)
+{
+	struct i2c_pinmux_info *pinfo = &dev->pinfo;
+	int ret;
+
+	ret = of_property_read_u32_index(dev->dev->of_node, "scl-pinmux", 0, &pinfo->scl_fmux_addr);
+	if (ret) {
+		if (ret == -EINVAL || ret == -ENODATA)
+			return 0;
+		return ret;
+	}
+
+	ret = of_property_read_u32_index(dev->dev->of_node, "scl-pinmux", 1, &pinfo->scl_iic_func_sel);
+	if (ret)
+		return ret;
+
+	ret = of_property_read_u32_index(dev->dev->of_node, "scl-pinmux", 2, &pinfo->scl_gpio_func_sel);
+	if (ret)
+		return ret;
+
+	ret = of_property_read_u32_index(dev->dev->of_node, "sda-pinmux", 0, &pinfo->sda_fmux_addr);
+	if (ret)
+		return ret;
+
+	ret = of_property_read_u32_index(dev->dev->of_node, "sda-pinmux", 1, &pinfo->sda_iic_func_sel);
+	if (ret)
+		return ret;
+
+	ret = of_property_read_u32_index(dev->dev->of_node, "sda-pinmux", 2, &pinfo->sda_gpio_func_sel);
+	if (ret)
+		return ret;
+
+	pinfo->pinmux_to_gpio = cvitek_pinmux_to_gpio;
+	pinfo->pinmux_to_iic = cvitek_pinmux_to_iic;
+
+	return 0;
+}
 
 static void i2c_dw_prepare_recovery(struct i2c_adapter *adap)
 {
 	struct dw_i2c_dev *dev = i2c_get_adapdata(adap);
+	struct i2c_pinmux_info *pinfo = &dev->pinfo;
 
 	i2c_dw_disable(dev);
 	reset_control_assert(dev->rst);
 	i2c_dw_prepare_clk(dev, false);
+
+	if (pinfo->pinmux_to_gpio)
+		pinfo->pinmux_to_gpio(pinfo);
 }
 
 static void i2c_dw_unprepare_recovery(struct i2c_adapter *adap)
 {
 	struct dw_i2c_dev *dev = i2c_get_adapdata(adap);
+	struct i2c_pinmux_info *pinfo = &dev->pinfo;
 
 	i2c_dw_prepare_clk(dev, true);
 	reset_control_deassert(dev->rst);
 	i2c_dw_init_master(dev);
+
+	if (pinfo->pinmux_to_iic)
+		pinfo->pinmux_to_iic(pinfo);
 }
 
 static int i2c_dw_init_recovery_info(struct dw_i2c_dev *dev)
@@ -715,6 +796,7 @@ static int i2c_dw_init_recovery_info(struct dw_i2c_dev *dev)
 	struct i2c_bus_recovery_info *rinfo = &dev->rinfo;
 	struct i2c_adapter *adap = &dev->adapter;
 	struct gpio_desc *gpio;
+	int ret;
 
 	gpio = devm_gpiod_get_optional(dev->dev, "scl", GPIOD_OUT_HIGH);
 	if (IS_ERR_OR_NULL(gpio))
@@ -731,6 +813,10 @@ static int i2c_dw_init_recovery_info(struct dw_i2c_dev *dev)
 	rinfo->prepare_recovery = i2c_dw_prepare_recovery;
 	rinfo->unprepare_recovery = i2c_dw_unprepare_recovery;
 	adap->bus_recovery_info = rinfo;
+
+	ret = i2c_dw_init_pinmux_info(dev);
+	if (ret)
+		return ret;
 
 	dev_info(dev->dev, "running with gpio recovery mode! scl%s",
 		 rinfo->sda_gpiod ? ",sda" : "");
